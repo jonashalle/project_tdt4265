@@ -13,6 +13,7 @@ class TDT4265Dataset(data.Dataset):
     def __init__(self, img_folder, annotation_file, transform=None):
         self.img_folder = img_folder
         self.annotate_file = annotation_file
+    
 
         # Start processing annotation
         with open(annotation_file) as fin:

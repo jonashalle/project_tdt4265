@@ -4,7 +4,7 @@ from ssd.data import TDT4265Dataset
 from tops.config import LazyCall as L
 from ssd.data.transforms import (
     ToTensor, Normalize, Resize,
-    GroundTruthBoxesToAnchors,RandomHorizontalFlip,RandomSampleCrop)
+    GroundTruthBoxesToAnchors,RandomHorizontalFlip,RandomSampleCrop,RandomPerspective)
 from .ssd300 import train, anchors, optimizer, schedulers, backbone, model, data_train, data_val, loss_objective
 from .utils import get_dataset_dir
 
@@ -18,7 +18,8 @@ train_cpu_transform = L(torchvision.transforms.Compose)(transforms=[
     L(RandomSampleCrop)(),
     L(ToTensor)(),
     L(Resize)(imshape="${train.imshape}"),
-    L(RandomHorizontalFlip)(p=0.5),    
+    L(RandomPerspective)(distortion_scale = 0.2, p=0.2),
+    L(RandomHorizontalFlip)(p=0.5),
     L(GroundTruthBoxesToAnchors)(anchors="${anchors}", iou_threshold=0.5),
     
 ])

@@ -200,3 +200,16 @@ class RandomPerspective(torch.nn.Module):
         perspectives = torchvision.transforms.RandomPerspective(distortion_scale = self.distortion_scale, p = self.p)
         batch["image"] = perspectives(batch_images)
         return batch
+
+class RandomRotation(torch.nn.Module):
+    def __init__(self, angle) -> None:
+        super().__init__()
+        self.angle = angle
+
+    @torch.no_grad()
+    def forward(self, batch):
+        # batch_images = batch["image"]
+        # perspectives = torchvision.transforms.RandomRotation(degrees = self.degrees)
+        # batch["image"] = perspectives(batch_images)
+        batch["image"] = torchvision.transforms.functional.rotate(batch["image"], angle = self.angle)
+        return batch

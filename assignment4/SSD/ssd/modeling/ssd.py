@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from .anchor_encoder import AnchorEncoder
 from torchvision.ops import batched_nms
-
+import numpy as np
 
 class SSD300(nn.Module):
     def __init__(self, 
@@ -21,7 +21,7 @@ class SSD300(nn.Module):
         self.num_classes = num_classes
         self.regression_heads = []
         self.classification_heads = []
-
+        self.num_boxes = anchors.num_boxes_per_fmap
         # Initialize output heads that are applied to each feature map from the backbone.
         for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
             self.regression_heads.append(nn.Conv2d(out_ch, n_boxes * 4, kernel_size=3, padding=1))
@@ -34,12 +34,40 @@ class SSD300(nn.Module):
 
     def _init_weights(self):
         layers = [*self.regression_heads, *self.classification_heads]
+        
         for layer in layers:
             for param in layer.parameters():
                 if param.dim() > 1: 
-                    # nn.init.xavier_uniform_(param)
-                    nn.init.normal_(param,mean=0.5,std=0.01)
-
+                    nn.init.xavier_uniform_(param)
+                    # nn.init.normal_(param, mean=0.0,std=0.01)  # Normal distribution of initial weights as done in the paper
+        """
+        for layer in layers:
+            i = 0
+            if isinstance(layer, nn.Conv2d):
+                nn.init.normal_(layer.weight, mean=0.0,std=0.01)
+                nn.init.zeros_(layer.bias)
+                
+                i += 1
+                if i == len(layers):
+                    p = 0.99
+                    bias = np.log(p * (self.num_classes-1)/(1-p))
+                    nn.init.constant_(layer.bias, bias)
+        """
+        # print(f"Number of classes:  {self.num_classes}")
+        # bias = np.log(p * (self.num_classes-1)/(1-p))
+        
+        # print(f"self.classification_heads.bias: {layers[-1].bias}")
+        # print(f"self.classification_heads.bias: {layers[1].bias}")
+        # print(f"Layers bias: {layers[0].bias}")
+        # print(f"self.classification_heads: {layers[1]}")
+        # print(f"self.regression: {layers[0]}")
+        # print(f"self.classification_heads?: {layers[-1]}")
+        # print(f"self.classification_heads?: {layers}")
+        
+        # print(f"Somthing not subscriptable: {layers[-1][-1]}")
+        # bias = layers[-1][]
+        
+        
     def regress_boxes(self, features):
         locations = []
         confidences = []

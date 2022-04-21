@@ -1,8 +1,7 @@
 from typing import OrderedDict
 import torch.nn as nn
 import torchvision.ops as ops
-import torchvision.models as models
-from typing import Tuple, List
+from .resnet import ResNet
 
 class FPN(nn.Module):
     """
@@ -15,52 +14,69 @@ class FPN(nn.Module):
 
         super().__init__()
         
-        self.model = models.resnet50(pretrained=True)
-        self.model.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 8)) #default for ResNet is output_size=(1, 1)
+        self.model = ResNet()
         self.out_channels = out_channels
+
+        # Initializing FPN helperfunction using in and out channels from the provided paper
         self.fpn = ops.FeaturePyramidNetwork(in_channels_list =[64, 256, 512, 1024, 2048], out_channels = self.out_channels[0])
 
+    # def forward(self, x):
+    #     #feature_map_dict = OrderedDict() 
+    #     out_features = []
+
+
+    #     x = self.model.conv1(x)
+    #     x = self.model.bn1(x)
+    #     x = self.model.relu(x)
+    #     x = self.model.maxpool(x) 
+    #     #feature_map_dict["feat0"] = x
+    #     out_features.append(x)
+    #     print(f"x1.shape {x.shape}")
+    #     x = self.model.layer1(x)
+    #     x = self.model.maxpool(x) # Choosing to use an exta MaxPool instead of messing with the architecture of layer1
+    #     #feature_map_dict["feat1"] = x
+    #     out_features.append(x)
+    #     print(f"x2.shape {x.shape}")
+    #     x = self.model.layer2(x)
+    #     #feature_map_dict["feat2"] = x
+    #     out_features.append(x)
+    #     print(f"x3.shape {x.shape}")
+
+    #     x = self.model.layer3(x)
+    #     #feature_map_dict["feat3"] = x
+    #     out_features.append(x)
+    #     print(f"x4.shape {x.shape}")
+
+    #     x = self.model.layer4(x)
+    #     #feature_map_dict["feat4"] = x
+    #     out_features.append(x)
+    #     print(f"x5.shape {x.shape}") 
+
+    #     x = self.model.avgpool(x)
+    #     #feature_map_dict["feat5"] = x
+    #     out_features.append(x)
+    #     print(f"x6.shape {x.shape}")
+
+    #     #output = self.fpn(feature_map_dict)
+    #     #outputs = output.values()
+    #     #out_features = list(outputs)
+    #     # print(f"Printing model: {self.model}")
+    #     # print(f"Out_features: {out_features}")
+    #     # print("Printing features")
+    #     # print([(k, v.shape) for k, v in output.items()])
+            
+    #     return out_features
+
     def forward(self, x):
-        feature_map_dict = OrderedDict()
+        resnet_features = self.model.forward(x)
 
-        x = self.model.conv1(x)
-        x = self.model.bn1(x)
-        x = self.model.relu(x)
-        x = self.model.maxpool(x)
-        feature_map_dict["feat0"] = x
+        feature_map_dict = OrderedDict() 
 
-        x = self.model.layer1(x)
-        x = self.model.maxpool(x)
-        feature_map_dict[f"feat1"] = x
-
-        x = self.model.layer2(x)
-        feature_map_dict[f"feat2"] = x
-
-        x = self.model.layer3(x)
-        feature_map_dict[f"feat3"] = x
-
-        x = self.model.layer4(x)
-        feature_map_dict[f"feat4"] = x
-        
-        x = self.model.avgpool(x)
-        feature_map_dict[f"feat5"] = x
+        for idx, feature in enumerate(resnet_features):
+            feature_map_dict[f"feat{idx}"] = feature
 
         output = self.fpn(feature_map_dict)
         outputs = output.values()
         out_features = list(outputs)
-        # print(f"Printing model: {self.model}")
-        # print(f"Out_features: {out_features}")
-        # print("Printing features")
-        # print([(k, v.shape) for k, v in output.items()])
-            
-        return out_features
-        
-    
-def main():
-    ResNet = models.resnet50(pretrained=True)
-    ResNet.eval()
-    print(ResNet)
-    
 
-if __name__ == "__main__":
-    main()
+        return out_features

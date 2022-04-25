@@ -1,7 +1,32 @@
+from cv2 import transform
 import torch.nn as nn
 import torch
 import math
 import torch.nn.functional as F
+
+def focal_loss(alpha, gamma, confs, gt_labels):
+    """
+    alpha: [num_classes, 1]
+    gamma: float
+    confs: [batch_size, num_classes, num_anchors]
+    gt_labels: [batch_size, num_anchors]
+    """
+    num_classes = confs.shape[1]
+    batch_size = confs.shape[0]
+    yk = torch.nn.functional.one_hot(gt_labels, num_classes) 
+    yk = torch.transpose(yk, 1, 2)
+    pk = F.softmax(confs, dim=1)
+    log_pk = F.log_softmax(confs, dim=1)
+    
+    b = pow((1-pk),gamma)
+    b = torch.transpose(b, 1, 2)
+    a = alpha*b
+    a = torch.transpose(a, 1, 2)    
+    loss= -torch.sum(a*yk*log_pk)/batch_size
+    #loss= -torch.sum(alpha*pow((1-pk),gamma)*yk*log_pk)/batch_size
+    
+
+    return loss
 
 def hard_negative_mining(loss, labels, neg_pos_ratio):
     """
@@ -66,9 +91,13 @@ class SSDMultiboxLoss(nn.Module):
         with torch.no_grad():
             to_log = - F.log_softmax(confs, dim=1)[:, 0]
             mask = hard_negative_mining(to_log, gt_labels, 3.0)
-        classification_loss = F.cross_entropy(confs, gt_labels, reduction="none")
-        classification_loss = classification_loss[mask].sum()
-
+        # classification_loss = F.cross_entropy(confs, gt_labels, reduction="none")
+        # classification_loss = classification_loss[mask].sum()
+        
+        alpha = [0.01,1,1,1,1,1,1,1,1]
+        alpha = torch.tensor(alpha).to('cuda:0')
+        gamma = 1
+        classification_loss = focal_loss(alpha,gamma,confs,gt_labels)
         pos_mask = (gt_labels > 0).unsqueeze(1).repeat(1, 4, 1)
         bbox_delta = bbox_delta[pos_mask]
         gt_locations = self._loc_vec(gt_bbox)

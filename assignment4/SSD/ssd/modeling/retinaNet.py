@@ -4,12 +4,13 @@ from .anchor_encoder import AnchorEncoder
 from torchvision.ops import batched_nms
 import numpy as np
 
-class SSD300(nn.Module):
+class RetinaNet(nn.Module):
     def __init__(self, 
             feature_extractor: nn.Module,
             anchors,
             loss_objective,
-            num_classes: int):
+            num_classes: int,
+            subnet_init: str):
         super().__init__()
         """
             Implements the SSD network.
@@ -22,38 +23,42 @@ class SSD300(nn.Module):
         self.regression_heads = []
         self.classification_heads = []
         self.num_boxes = anchors.num_boxes_per_fmap
+        self.subnet_init = subnet_init
         # Initialize output heads that are applied to each feature map from the backbone.
         for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
-            self.regression_heads.append(nn.Conv2d(out_ch, n_boxes * 4, kernel_size=3, padding=1))
-            self.classification_heads.append(nn.Conv2d(out_ch, n_boxes * self.num_classes, kernel_size=3, padding=1))
+            self.regression_heads.append(self.subnet(out_ch, 4 * n_boxes))
+            self.classification_heads.append(self.subnet(out_ch, n_boxes * self.num_classes))
 
         self.regression_heads = nn.ModuleList(self.regression_heads)
         self.classification_heads = nn.ModuleList(self.classification_heads)
         self.anchor_encoder = AnchorEncoder(anchors)
-        self._init_weights()   
+        self._init_weights(subnet_init)
 
-    def _init_weights(self):
+    def _init_weights(self, subnet_init):
         layers = [*self.regression_heads, *self.classification_heads]
         
         for layer in layers:
             for param in layer.parameters():
                 if param.dim() > 1: 
                     nn.init.xavier_uniform_(param)
-                    # nn.init.normal_(param, mean=0.0,std=0.01)  # Normal distribution of initial weights as done in the paper
-        """
-        for layer in layers:
-            i = 0
-            if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight, mean=0.0,std=0.01)
-                nn.init.zeros_(layer.bias)
-                
-                i += 1
-                if i == len(layers):
-                    p = 0.99
-                    bias = np.log(p * (self.num_classes-1)/(1-p))
-                    nn.init.constant_(layer.bias, bias)
-        """
+                    #nn.init.normal_(param, mean=0.0,std=0.01)  # Normal distribution of initial weights as done in the paper
 
+        #model.conv1[0].weight.data = my_weights
+
+        # for layer in layers:
+        #     for conv in layer:
+        #         if isinstance(conv, nn.Conv2d):
+        #             nn.init.normal_(conv.weight, mean=0.0,std=0.01)
+        #             nn.init.zeros_(conv.bias)
+        # p = 0.99        
+        # bias = np.log(p * (self.num_classes-1)/(1-p))
+        # for subnet in self.classification_heads:
+        #     subnet.
+        
+        # nn.init.constant_(layers[1][].bias, bias)
+        
+                    
+        
         # print(f"Number of classes:  {self.num_classes}")
         # bias = np.log(p * (self.num_classes-1)/(1-p))
         
@@ -67,7 +72,49 @@ class SSD300(nn.Module):
         
         # print(f"Somthing not subscriptable: {layers[-1][-1]}")
         # bias = layers[-1][]
-          
+
+    def subnet(self, in_channels, out_channels):
+        return nn.Sequential(
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = in_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = in_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = in_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = in_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = out_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        ) #softmax in loss function      
         
     def regress_boxes(self, features):
         locations = []
@@ -139,12 +186,3 @@ def filter_predictions(
         # 3. Only keep max_output best boxes (NMS returns indices in sorted order, decreasing w.r.t. scores)
         keep_idx = keep_idx[:max_output]
         return boxes_ltrb[keep_idx], category[keep_idx], scores[keep_idx]
-
-       
-
-    
-    
-  
-        
-        
-

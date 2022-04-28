@@ -9,7 +9,8 @@ class SSD300(nn.Module):
             feature_extractor: nn.Module,
             anchors,
             loss_objective,
-            num_classes: int):
+            num_classes: int,
+            subnet_init = "xavier"):
         super().__init__()
         """
             Implements the SSD network.
@@ -30,29 +31,27 @@ class SSD300(nn.Module):
         self.regression_heads = nn.ModuleList(self.regression_heads)
         self.classification_heads = nn.ModuleList(self.classification_heads)
         self.anchor_encoder = AnchorEncoder(anchors)
-        self._init_weights()   
+        self._init_weights(subnet_init)   
 
-    def _init_weights(self):
+    def _init_weights(self, subnet_init):
         layers = [*self.regression_heads, *self.classification_heads]
         
-        for layer in layers:
-            for param in layer.parameters():
-                if param.dim() > 1: 
-                    nn.init.xavier_uniform_(param)
-                    # nn.init.normal_(param, mean=0.0,std=0.01)  # Normal distribution of initial weights as done in the paper
-        """
-        for layer in layers:
-            i = 0
-            if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight, mean=0.0,std=0.01)
-                nn.init.zeros_(layer.bias)
-                
-                i += 1
-                if i == len(layers):
-                    p = 0.99
-                    bias = np.log(p * (self.num_classes-1)/(1-p))
-                    nn.init.constant_(layer.bias, bias)
-        """
+        if subnet_init == "xavier": # Original xavier_uniform parameter initialization
+            for layer in layers:
+                for param in layer.parameters():
+                    if param.dim() > 1: 
+                        nn.init.xavier_uniform_(param)
+
+        if subnet_init == "gaussian": # Our weight and bias initialization based on the Focal loss paper
+            for layer in layers:
+                if isinstance(layer, nn.Conv2d):
+                    nn.init.normal_(layer.weight, mean=0.0,std=0.01)
+                    nn.init.zeros_(layer.bias)
+            p = 0.99        
+            bias = np.log10(p * (self.num_classes-1)/(1-p))
+            for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
+                nn.init.constant_(subnet.bias[:n_boxes], bias)
+                #print(subnet[-1].bias)
 
         # print(f"Number of classes:  {self.num_classes}")
         # bias = np.log(p * (self.num_classes-1)/(1-p))

@@ -55,14 +55,13 @@ class RetinaNet(nn.Module):
             for layer in layers:
                 for conv in layer:
                     if isinstance(conv, nn.Conv2d):
-                        nn.init.normal_(conv.weight, mean=0.0,std=0.01)
-                        nn.init.zeros_(conv.bias)
+                        nn.init.normal_(conv.weight.data, mean=0.0,std=0.01)
+                        nn.init.zeros_(conv.bias.data)
             p = 0.99        
-            bias = np.log10(p * (self.num_classes-1)/(1-p))
+            bias = np.log(p * (self.num_classes-1)/(1-p))
             for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
-                nn.init.constant_(subnet[-1].bias[:n_boxes], bias)
-                #print(subnet[-1].bias)
-
+                nn.init.constant_(subnet[-1].bias.data[:n_boxes], bias)
+            
 
     def subnet(self, in_channels, out_channels):
         return nn.Sequential(

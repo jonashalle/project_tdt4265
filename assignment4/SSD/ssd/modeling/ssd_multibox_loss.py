@@ -23,8 +23,8 @@ def focal_loss(alpha, gamma, confs, gt_labels):
     a = alpha*b
     a = torch.transpose(a, 1, 2)
     
-    loss = - a*yk*log_pk
-    loss = loss.sum(dim=1).mean()
+    #loss = - a*yk*log_pk
+    #loss = loss.sum(dim=1).mean()
 
     loss= -torch.sum(a*yk*log_pk)
 

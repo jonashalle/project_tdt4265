@@ -34,7 +34,6 @@ class RetinaNet(nn.Module):
         self.subnet_init = subnet_init
         # Initialize output heads that are applied to each feature map from the backbone.
         for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
-            print(n_boxes, out_ch)
             self.regression_heads.append(self.subnet(out_ch, 4 * n_boxes))
             self.classification_heads.append(self.subnet(out_ch, n_boxes * self.num_classes))
 

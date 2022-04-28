@@ -10,11 +10,19 @@ class RetinaNet(nn.Module):
             anchors,
             loss_objective,
             num_classes: int,
-            subnet_init: str):
+            subnet_init = "xavier"):
         super().__init__()
         """
             Implements the SSD network.
             Backbone outputs a list of features, which are gressed to SSD output with regression/classification heads.
+
+            Takes arguments:
+            feature_extractor: which is an nn.Module
+            anchors: anchor objects that determine the anchorboxes
+            loss_objective: 
+            num_classes: the number of classification classes
+            subnet_init: str which 
+
         """
 
         self.feature_extractor = feature_extractor
@@ -26,6 +34,7 @@ class RetinaNet(nn.Module):
         self.subnet_init = subnet_init
         # Initialize output heads that are applied to each feature map from the backbone.
         for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
+            print(n_boxes, out_ch)
             self.regression_heads.append(self.subnet(out_ch, 4 * n_boxes))
             self.classification_heads.append(self.subnet(out_ch, n_boxes * self.num_classes))
 
@@ -37,41 +46,24 @@ class RetinaNet(nn.Module):
     def _init_weights(self, subnet_init):
         layers = [*self.regression_heads, *self.classification_heads]
         
-        for layer in layers:
-            for param in layer.parameters():
-                if param.dim() > 1: 
-                    nn.init.xavier_uniform_(param)
-                    #nn.init.normal_(param, mean=0.0,std=0.01)  # Normal distribution of initial weights as done in the paper
+        if subnet_init == "xavier": # Original xavier_uniform parameter initialization
+            for layer in layers:
+                for param in layer.parameters():
+                    if param.dim() > 1: 
+                        nn.init.xavier_uniform_(param)
 
-        #model.conv1[0].weight.data = my_weights
+        if subnet_init == "gaussian": # Our weight and bias initialization based on the Focal loss paper
+            for layer in layers:
+                for conv in layer:
+                    if isinstance(conv, nn.Conv2d):
+                        nn.init.normal_(conv.weight, mean=0.0,std=0.01)
+                        nn.init.zeros_(conv.bias)
+            p = 0.99        
+            bias = np.log10(p * (self.num_classes-1)/(1-p))
+            for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
+                nn.init.constant_(subnet[-1].bias[:n_boxes], bias)
+                #print(subnet[-1].bias)
 
-        # for layer in layers:
-        #     for conv in layer:
-        #         if isinstance(conv, nn.Conv2d):
-        #             nn.init.normal_(conv.weight, mean=0.0,std=0.01)
-        #             nn.init.zeros_(conv.bias)
-        # p = 0.99        
-        # bias = np.log(p * (self.num_classes-1)/(1-p))
-        # for subnet in self.classification_heads:
-        #     subnet.
-        
-        # nn.init.constant_(layers[1][].bias, bias)
-        
-                    
-        
-        # print(f"Number of classes:  {self.num_classes}")
-        # bias = np.log(p * (self.num_classes-1)/(1-p))
-        
-        # print(f"self.classification_heads.bias: {layers[-1].bias}")
-        # print(f"self.classification_heads.bias: {layers[1].bias}")
-        # print(f"Layers bias: {layers[0].bias}")
-        # print(f"self.classification_heads: {layers[1]}")
-        # print(f"self.regression: {layers[0]}")
-        # print(f"self.classification_heads?: {layers[-1]}")
-        # print(f"self.classification_heads?: {layers}")
-        
-        # print(f"Somthing not subscriptable: {layers[-1][-1]}")
-        # bias = layers[-1][]
 
     def subnet(self, in_channels, out_channels):
         return nn.Sequential(

@@ -52,7 +52,7 @@ class SSD300(nn.Module):
             for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
                 nn.init.constant_(subnet.bias[:n_boxes], bias)
                 #print(subnet[-1].bias)
-        
+                
     def regress_boxes(self, features):
         locations = []
         confidences = []

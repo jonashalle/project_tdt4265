@@ -52,21 +52,6 @@ class SSD300(nn.Module):
             for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
                 nn.init.constant_(subnet.bias[:n_boxes], bias)
                 #print(subnet[-1].bias)
-
-        # print(f"Number of classes:  {self.num_classes}")
-        # bias = np.log(p * (self.num_classes-1)/(1-p))
-        
-        # print(f"self.classification_heads.bias: {layers[-1].bias}")
-        # print(f"self.classification_heads.bias: {layers[1].bias}")
-        # print(f"Layers bias: {layers[0].bias}")
-        # print(f"self.classification_heads: {layers[1]}")
-        # print(f"self.regression: {layers[0]}")
-        # print(f"self.classification_heads?: {layers[-1]}")
-        # print(f"self.classification_heads?: {layers}")
-        
-        # print(f"Somthing not subscriptable: {layers[-1][-1]}")
-        # bias = layers[-1][]
-          
         
     def regress_boxes(self, features):
         locations = []

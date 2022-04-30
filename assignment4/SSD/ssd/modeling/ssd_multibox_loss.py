@@ -117,11 +117,12 @@ class RetinaFocalLoss(nn.Module):
         2. Localization Loss: Only on positive labels
         Suppose input dboxes has the shape 8732x4
     """
-    def __init__(self, anchors):
+    def __init__(self, anchors, alpha = [0.01,1,1,1,1,1,1,1,1]):
         super().__init__()
         self.scale_xy = 1.0/anchors.scale_xy
         self.scale_wh = 1.0/anchors.scale_wh
 
+        self.alpha = alpha
         self.sl1_loss = nn.SmoothL1Loss(reduction='none')
         self.anchors = nn.Parameter(anchors(order="xywh").transpose(0, 1).unsqueeze(dim = 0),
             requires_grad=False)
@@ -147,8 +148,8 @@ class RetinaFocalLoss(nn.Module):
         """
         gt_bbox = gt_bbox.transpose(1, 2).contiguous() # reshape to [batch_size, 4, num_anchors]
         
-        alpha = [0.01,1,1,1,1,1,1,1,1] # Could change these to [10, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]
-        alpha = torch.tensor(alpha).to('cuda:0')
+        # alpha = [0.01,1,1,1,1,1,1,1,1] # Could change these to [10, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]
+        alpha = torch.tensor(self.alpha).to('cuda:0')
         gamma = 2
         classification_loss = focal_loss(alpha,gamma,confs,gt_labels)
         pos_mask = (gt_labels > 0).unsqueeze(1).repeat(1, 4, 1)

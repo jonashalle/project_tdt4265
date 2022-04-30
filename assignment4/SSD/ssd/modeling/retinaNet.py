@@ -61,7 +61,8 @@ class RetinaNet(nn.Module):
             bias = np.log(p * (self.num_classes-1)/(1-p))
             for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
                 nn.init.constant_(subnet[-1].bias.data[:n_boxes], bias)
-            
+            print("Classification from layers: ", layer[-1].bias)
+            layers[-1][-1][-1].bias
 
     def subnet(self, in_channels, out_channels):
         return nn.Sequential(

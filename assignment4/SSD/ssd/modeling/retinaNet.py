@@ -59,7 +59,7 @@ class RetinaNet(nn.Module):
                         nn.init.zeros_(conv.bias.data)
             p = 0.99        
             bias = np.log(p * (self.num_classes-1)/(1-p)) # ln
-            # bias = np.log10(p * (self.num_classes-1)/(1-p))
+            # bias = np.log10(p * (self.num_classes-1)/(1-p)) # log 10
             for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
                 nn.init.constant_(subnet[-1].bias.data[:n_boxes], bias)
             print("Classification from layers: ", layer[-1].bias)

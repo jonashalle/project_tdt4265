@@ -105,14 +105,13 @@ class SSDMultiboxLoss(nn.Module):
         gt_locations = gt_locations[pos_mask]
         regression_loss = F.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
         num_pos = gt_locations.shape[0]/4
-        total_loss = regression_loss/num_pos + classification_loss/num_pos # Option 2
-        total_loss = regression_loss/num_pos + classification_loss # Option 1
+        total_loss = regression_loss/num_pos + classification_loss/num_pos # We ended up using option 2 in the Focal loss note
         to_log = dict(
             regression_loss=regression_loss/num_pos,
-            # classification_loss=classification_loss/num_pos, # Option 2
-            classification_loss=classification_loss, # Option 1
+            classification_loss=classification_loss/num_pos,
             total_loss=total_loss
         )
+        
         return total_loss, to_log
 
 class RetinaFocalLoss(nn.Module):
@@ -163,10 +162,13 @@ class RetinaFocalLoss(nn.Module):
         gt_locations = gt_locations[pos_mask]
         regression_loss = F.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
         num_pos = gt_locations.shape[0]/4
-        total_loss = regression_loss/num_pos + classification_loss/num_pos # We ended up using option 2 in the Focal loss note
+
+        # total_loss = regression_loss/num_pos + classification_loss/num_pos # Option 2
+        total_loss = regression_loss/num_pos + classification_loss # Option 1
         to_log = dict(
             regression_loss=regression_loss/num_pos,
-            classification_loss=classification_loss/num_pos,
+            # classification_loss=classification_loss/num_pos, # Option 2
+            classification_loss=classification_loss, # Option 1
             total_loss=total_loss
         )
         return total_loss, to_log

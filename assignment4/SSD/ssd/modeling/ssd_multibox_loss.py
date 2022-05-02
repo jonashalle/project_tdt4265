@@ -25,11 +25,11 @@ def focal_loss(alpha, gamma, confs, gt_labels):
     a = torch.transpose(a, 1, 2)
 
     # Option 2
-    # loss= -torch.sum(a*yk*log_pk)
+    loss= -torch.sum(a*yk*log_pk)
 
     # Option 1
-    loss = - a*yk*log_pk
-    loss = loss.sum(dim=1).mean() 
+    # loss = - a*yk*log_pk
+    # loss = loss.sum(dim=1).mean() 
     
     return loss
 
@@ -163,12 +163,12 @@ class RetinaFocalLoss(nn.Module):
         regression_loss = F.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
         num_pos = gt_locations.shape[0]/4
 
-        # total_loss = regression_loss/num_pos + classification_loss/num_pos # Option 2
-        total_loss = regression_loss/num_pos + classification_loss # Option 1
+        total_loss = regression_loss/num_pos + classification_loss/num_pos # Option 2
+        # total_loss = regression_loss/num_pos + classification_loss # Option 1
         to_log = dict(
             regression_loss=regression_loss/num_pos,
-            # classification_loss=classification_loss/num_pos, # Option 2
-            classification_loss=classification_loss, # Option 1
+            classification_loss=classification_loss/num_pos, # Option 2
+            # classification_loss=classification_loss, # Option 1
             total_loss=total_loss
         )
         return total_loss, to_log

@@ -4,7 +4,7 @@ from .anchor_encoder import AnchorEncoder
 from torchvision.ops import batched_nms
 import numpy as np
 
-class RetinaNet(nn.Module):
+class RetinaNetSharedHeads(nn.Module):
     def __init__(self, 
             feature_extractor: nn.Module,
             anchors,
@@ -15,32 +15,108 @@ class RetinaNet(nn.Module):
         """
             Implements the SSD network.
             Backbone outputs a list of features, which are gressed to SSD output with regression/classification heads.
-
-            Takes arguments:
-            feature_extractor: which is an nn.Module
-            anchors: anchor objects that determine the anchorboxes
-            loss_objective: 
-            num_classes: the number of classification classes
-            subnet_init: str which 
-
         """
 
         self.feature_extractor = feature_extractor
         self.loss_func = loss_objective
         self.num_classes = num_classes
-        self.regression_heads = []
-        self.classification_heads = []
+        # self.regression_heads = []
+        # self.classification_heads = []
         self.num_boxes = anchors.num_boxes_per_fmap
-        self.subnet_init = subnet_init
+        box_num = self.num_boxes[0]
+        out_ch = self.feature_extractor.out_channels[0]
         # Initialize output heads that are applied to each feature map from the backbone.
-        for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
-            self.regression_heads.append(self.subnet(out_ch, 4 * n_boxes))
-            self.classification_heads.append(self.subnet(out_ch, n_boxes * self.num_classes))
+        # for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
+        #    self.regression_heads.append(nn.Conv2d(out_ch, n_boxes * 4, kernel_size=3, padding=1))
+        #    self.classification_heads.append(nn.Conv2d(out_ch, n_boxes * self.num_classes, kernel_size=3, padding=1))
+        self.classification_heads = nn.Sequential(
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = out_ch,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = out_ch,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = out_ch,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = out_ch,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = box_num * self.num_classes,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        ) #softmax in loss function      
+        
+        self.regression_heads = nn.Sequential(
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = out_ch,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = out_ch,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = out_ch,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = out_ch,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = out_ch,
+            out_channels = 4 * self.num_classes,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        ) #softmax in loss function   
 
-        self.regression_heads = nn.ModuleList(self.regression_heads)
-        self.classification_heads = nn.ModuleList(self.classification_heads)
+        #self.regression_heads = nn.ModuleList(self.regression_heads)
+        #self.classification_heads = nn.ModuleList(self.classification_heads)
         self.anchor_encoder = AnchorEncoder(anchors)
-        self._init_weights(subnet_init)
+        self._init_weights(subnet_init)   
 
     def _init_weights(self, subnet_init):
         layers = [*self.regression_heads, *self.classification_heads]
@@ -52,81 +128,24 @@ class RetinaNet(nn.Module):
                         nn.init.xavier_uniform_(param)
 
         if subnet_init == "gaussian": # Our weight and bias initialization based on the Focal loss paper
-            # for layer in layers:
-            #     for conv in layer:
-            #         if isinstance(conv, nn.Conv2d):
-            #             nn.init.normal_(conv.weight.data, mean=0.0,std=0.01)
-            #             nn.init.zeros_(conv.bias.data)
-
-            for class_head in self.classification_heads:
-                for conv in class_head:
-                    if isinstance(conv, nn.Conv2d):
-                        nn.init.normal_(conv.weight.data, mean=0.0, std=0.01)
-                        nn.init.zeros_(conv.bias.data)
-
-            for regress_head in self.regression_heads:    
-                for conv in regress_head:
-                    if isinstance(conv, nn.Conv2d):
-                        nn.init.xavier_uniform_(conv.weight.data)
-                        # nn.init.zeros_(conv.bias.data) # Trying without bias to zero as well
-
+            for layer in layers:
+                if isinstance(layer, nn.Conv2d):
+                    nn.init.normal_(layer.weight, mean=0.0,std=0.01)
+                    nn.init.zeros_(layer.bias)
             p = 0.99        
-            bias = np.log(p * (self.num_classes-1)/(1-p)) # ln
-            # bias = np.log10(p * (self.num_classes-1)/(1-p)) # log 10
+            bias = np.log10(p * (self.num_classes-1)/(1-p))
             for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
-                nn.init.constant_(subnet[-1].bias.data[:n_boxes], bias)
-            # print("Classification from layers: ", layers[-1][-1].bias)
-            # layers[-1][-1][-1].bias
-
-    def subnet(self, in_channels, out_channels):
-        return nn.Sequential(
-        nn.Conv2d(
-            in_channels = in_channels,
-            out_channels = in_channels,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = in_channels,
-            out_channels = in_channels,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = in_channels,
-            out_channels = in_channels,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = in_channels,
-            out_channels = in_channels,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = in_channels,
-            out_channels = out_channels,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ), 
-        ) #softmax in loss function      
-        
+                nn.init.constant_(subnet.bias[:n_boxes], bias)
+                #print(subnet[-1].bias)
+                
     def regress_boxes(self, features):
         locations = []
         confidences = []
-        for idx, x in enumerate(features):
-            bbox_delta = self.regression_heads[idx](x).view(x.shape[0], 4, -1)
-            bbox_conf = self.classification_heads[idx](x).view(x.shape[0], self.num_classes, -1)
+        for x in features:
+            #print(self.regression_heads(x))
+            #self.regression_heads(x).shape
+            bbox_delta = self.regression_heads(x).view(x.shape[0], 4, -1)
+            bbox_conf = self.classification_heads(x).view(x.shape[0], self.num_classes, -1)
             locations.append(bbox_delta)
             confidences.append(bbox_conf)
         bbox_delta = torch.cat(locations, 2).contiguous()
@@ -191,3 +210,12 @@ def filter_predictions(
         # 3. Only keep max_output best boxes (NMS returns indices in sorted order, decreasing w.r.t. scores)
         keep_idx = keep_idx[:max_output]
         return boxes_ltrb[keep_idx], category[keep_idx], scores[keep_idx]
+
+       
+
+    
+    
+  
+        
+        
+

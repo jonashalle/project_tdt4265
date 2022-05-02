@@ -20,98 +20,12 @@ class RetinaNetSharedHeads(nn.Module):
         self.feature_extractor = feature_extractor
         self.loss_func = loss_objective
         self.num_classes = num_classes
-        # self.regression_heads = []
-        # self.classification_heads = []
         self.num_boxes = anchors.num_boxes_per_fmap
         box_num = self.num_boxes[0]
         out_ch = self.feature_extractor.out_channels[0]
-        # Initialize output heads that are applied to each feature map from the backbone.
-        # for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
-        #    self.regression_heads.append(nn.Conv2d(out_ch, n_boxes * 4, kernel_size=3, padding=1))
-        #    self.classification_heads.append(nn.Conv2d(out_ch, n_boxes * self.num_classes, kernel_size=3, padding=1))
-        self.classification_heads = nn.Sequential(
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = out_ch,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = out_ch,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = out_ch,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = out_ch,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = box_num * self.num_classes,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        ) #softmax in loss function      
         
-        self.regression_heads = nn.Sequential(
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = out_ch,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = out_ch,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = out_ch,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = out_ch,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        nn.ReLU(),
-        nn.Conv2d(
-            in_channels = out_ch,
-            out_channels = 4 * self.num_classes,
-            kernel_size = 3,
-            stride = 1,
-            padding = 1
-        ),
-        ) #softmax in loss function   
+        self.classification_heads = self.subnet(out_ch, box_num * self.num_classes)
+        self.regression_heads = self.subnet(out_ch, 4 * box_num)
 
         #self.regression_heads = nn.ModuleList(self.regression_heads)
         #self.classification_heads = nn.ModuleList(self.classification_heads)
@@ -152,6 +66,48 @@ class RetinaNetSharedHeads(nn.Module):
         confidences = torch.cat(confidences, 2).contiguous()
         return bbox_delta, confidences
 
+    def subnet(self, in_channels, out_channels):
+        return nn.Sequential(
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = in_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = in_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = in_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = in_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ),
+        nn.ReLU(),
+        nn.Conv2d(
+            in_channels = in_channels,
+            out_channels = out_channels,
+            kernel_size = 3,
+            stride = 1,
+            padding = 1
+        ), 
+        ) #softmax in loss function    
     
     def forward(self, img: torch.Tensor, **kwargs):
         """

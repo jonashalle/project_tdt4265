@@ -1,7 +1,7 @@
 import torch.nn as nn
 from typing import Tuple, List
 
-
+# Helper function for making the intermediate layers of the basic backbone
 def relu_conv_layer(in_channel_size, out_channel_size, num_filters, conv_kernel_size, conv_padding):
     return nn.Sequential(
             nn.ReLU(),
@@ -24,7 +24,7 @@ def relu_conv_layer(in_channel_size, out_channel_size, num_filters, conv_kernel_
         )
 class BasicModel(nn.Module):
     """
-    This is a basic backbone for SSD.
+    This is a basic backbone for SSD, made to fit the LiDAR data in the TDT4265 project
     The feature extractor outputs a list of 6 feature maps, with the sizes:
     [shape(-1, output_channels[0], 38, 38),
      shape(-1, output_channels[1], 19, 19),
@@ -84,30 +84,9 @@ class BasicModel(nn.Module):
             nn.ReLU(),
         )])
         self.feature_extractor.append(relu_conv_layer(output_channels[0], output_channels[1], 128, self.conv_kernel_size, self.conv_padding))
-
         self.feature_extractor.append(relu_conv_layer(output_channels[1],output_channels[2],256,self.conv_kernel_size,self.conv_padding))
-        
         self.feature_extractor.append(relu_conv_layer(output_channels[2],output_channels[3],128,self.conv_kernel_size,self.conv_padding))
         self.feature_extractor.append(relu_conv_layer(output_channels[3],output_channels[4],128,self.conv_kernel_size,self.conv_padding))
-        # self.feature_extractor.append(nn.Sequential(
-        #     nn.ReLU(),
-        #     nn.Conv2d(
-        #         in_channels=output_channels[3],
-        #         out_channels=output_channels[4],
-        #         kernel_size = self.conv_kernel_size,
-        #         stride = 1,
-        #         padding = self.conv_padding
-        #     ),
-        #     nn.ReLU(),            
-        #     nn.Conv2d(
-        #         in_channels=output_channels[3],
-        #         out_channels=128,
-        #         kernel_size = self.conv_kernel_size,
-        #         stride = 2,
-        #         padding = self.conv_padding
-        #     ),
-        #     nn.ReLU(),
-        # ))
         self.feature_extractor.append(nn.Sequential(
             nn.ReLU(),
             nn.Conv2d(
@@ -118,6 +97,7 @@ class BasicModel(nn.Module):
                 padding = 1
             ),
             nn.ReLU(),
+            # We chose to use the MaxPool here to make the dimensions add up
             nn.MaxPool2d(self.pool_kernel_size, stride = self.pool_stride),
             nn.Conv2d(
                 in_channels=128,
@@ -157,7 +137,3 @@ class BasicModel(nn.Module):
         assert len(out_features) == len(self.output_feature_shape),\
             f"Expected that the length of the outputted features to be: {len(self.output_feature_shape)}, but it was: {len(out_features)}"
         return tuple(out_features)
-
-
-
-        # a comment to test something

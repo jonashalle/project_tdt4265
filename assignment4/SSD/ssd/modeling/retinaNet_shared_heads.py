@@ -25,7 +25,7 @@ class RetinaNetSharedHeads(nn.Module):
         box_num = self.num_boxes[0]
         out_ch = self.feature_extractor.out_channels[0]
         
-        # Set 
+        # Making the two classification heads
         self.classification_heads = self.subnet(out_ch, box_num * self.num_classes)
         self.regression_heads = self.subnet(out_ch, 4 * box_num)
 

@@ -43,18 +43,21 @@ class AnchorBoxes(object):
             for r in aspect_ratios[fidx]:
                 h = h_min*sqrt(r)
                 w = w_min/sqrt(r)
-                #bbox_sizes.append((h_min*sqrt(r), w_min/sqrt(r)))
-                #bbox_sizes.append((h_min/sqrt(r), w_min*sqrt(r)))
-                bbox_sizes.append((w_min/sqrt(r), h_min*sqrt(r)))
+
+                #bbox_sizes.append((w_min/sqrt(r), h_min*sqrt(r)))
+                bbox_sizes.append((w_min/(sqrt(r)), h_min*sqrt(r)))
                 bbox_sizes.append((w_min*sqrt(r), h_min/sqrt(r)))
+
             scale_y = image_shape[0] / strides[fidx][0]
             scale_x = image_shape[1] / strides[fidx][1]
             for w, h in bbox_sizes:
+                
                 for i in range(fH):
                     for j in range(fW):
                         cx = (j + 0.5)/scale_x
                         cy = (i + 0.5)/scale_y
                         anchors.append((cx, cy, w, h))
+
 
         self.anchors_xywh = torch.tensor(anchors).clamp(min=0, max=1).float()
         self.anchors_ltrb = self.anchors_xywh.clone()

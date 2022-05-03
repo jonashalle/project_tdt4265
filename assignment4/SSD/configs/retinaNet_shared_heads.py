@@ -8,5 +8,5 @@ model = L(RetinaNetSharedHeads)(
     anchors="${anchors}",
     loss_objective="${loss_objective}",
     num_classes=8 + 1,
-    subnet_init="xavier" 
+    subnet_init="xavier"
 )

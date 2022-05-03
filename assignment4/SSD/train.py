@@ -16,6 +16,8 @@ from torch.optim.lr_scheduler import ChainedScheduler
 from omegaconf import OmegaConf
 torch.backends.cudnn.benchmark = True
 
+
+
 def train_epoch(
         model, scaler: torch.cuda.amp.GradScaler,
         optim, dataloader_train, scheduler,
@@ -60,7 +62,7 @@ def print_config(cfg):
 
 
 @click.command()
-@click.argument("config_path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument("config_path", type=click.Path(exists=True, dir_okay=False, path_type=str))
 @click.option("--evaluate-only", default=False, is_flag=True, help="Only run evaluation, no training.")
 def train(config_path: Path, evaluate_only: bool):
     logger.logger.DEFAULT_SCALAR_LEVEL = logger.logger.DEBUG

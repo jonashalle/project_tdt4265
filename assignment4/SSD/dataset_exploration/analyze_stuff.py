@@ -1,11 +1,11 @@
 from tops.config import instantiate, LazyConfig
 from ssd import utils
 from tqdm import tqdm
+import json
 
-
-def get_config(config_path):
+def get_config(config_path,batch_size: int=1):
     cfg = LazyConfig.load(config_path)
-    cfg.train.batch_size = 1
+    cfg.train.batch_size = batch_size
     return cfg
 
 
@@ -27,6 +27,18 @@ def analyze_something(dataloader, cfg):
         print("The keys in the batch are:", batch.keys())
         exit()
 
+def load_annotation_file(cfg , set_type: str):
+    if set_type == "train":
+        _file = cfg["data_train"]["dataset"]["annotation_file"]
+    elif set_type == "val":
+        _file = cfg["data_val"]["dataset"]["annotation_file"]
+    else:
+        raise ValueError(f"Unknown set_type: {set_type}")
+    if _file.endswith(".json"):
+        with open(_file, "r") as f:
+            return json.load(f)
+    else:
+        raise NotImplementedError("Only json are supported!")
 
 def main():
     config_path = "configs/tdt4265.py"

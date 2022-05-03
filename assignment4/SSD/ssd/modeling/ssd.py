@@ -2,14 +2,15 @@ import torch
 import torch.nn as nn
 from .anchor_encoder import AnchorEncoder
 from torchvision.ops import batched_nms
-
+import numpy as np
 
 class SSD300(nn.Module):
     def __init__(self, 
             feature_extractor: nn.Module,
             anchors,
             loss_objective,
-            num_classes: int):
+            num_classes: int,
+            subnet_init = "xavier"):
         super().__init__()
         """
             Implements the SSD network.
@@ -21,7 +22,7 @@ class SSD300(nn.Module):
         self.num_classes = num_classes
         self.regression_heads = []
         self.classification_heads = []
-
+        self.num_boxes = anchors.num_boxes_per_fmap
         # Initialize output heads that are applied to each feature map from the backbone.
         for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
             self.regression_heads.append(nn.Conv2d(out_ch, n_boxes * 4, kernel_size=3, padding=1))
@@ -30,14 +31,28 @@ class SSD300(nn.Module):
         self.regression_heads = nn.ModuleList(self.regression_heads)
         self.classification_heads = nn.ModuleList(self.classification_heads)
         self.anchor_encoder = AnchorEncoder(anchors)
-        self._init_weights()
+        self._init_weights(subnet_init)   
 
-    def _init_weights(self):
+    def _init_weights(self, subnet_init):
         layers = [*self.regression_heads, *self.classification_heads]
-        for layer in layers:
-            for param in layer.parameters():
-                if param.dim() > 1: nn.init.xavier_uniform_(param)
+        
+        if subnet_init == "xavier": # Original xavier_uniform parameter initialization
+            for layer in layers:
+                for param in layer.parameters():
+                    if param.dim() > 1: 
+                        nn.init.xavier_uniform_(param)
 
+        if subnet_init == "gaussian": # Our weight and bias initialization based on the Focal loss paper
+            for layer in layers:
+                if isinstance(layer, nn.Conv2d):
+                    nn.init.normal_(layer.weight, mean=0.0,std=0.01)
+                    nn.init.zeros_(layer.bias)
+            p = 0.99        
+            bias = np.log10(p * (self.num_classes-1)/(1-p))
+            for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
+                nn.init.constant_(subnet.bias[:n_boxes], bias)
+                #print(subnet[-1].bias)
+                
     def regress_boxes(self, features):
         locations = []
         confidences = []
@@ -108,3 +123,12 @@ def filter_predictions(
         # 3. Only keep max_output best boxes (NMS returns indices in sorted order, decreasing w.r.t. scores)
         keep_idx = keep_idx[:max_output]
         return boxes_ltrb[keep_idx], category[keep_idx], scores[keep_idx]
+
+       
+
+    
+    
+  
+        
+        
+

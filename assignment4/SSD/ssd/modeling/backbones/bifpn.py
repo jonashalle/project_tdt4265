@@ -35,10 +35,19 @@ class BiFPN(nn.Module):
         #    self.convs.append(self.bifpn_conv(in_channels=in_channels, out_channels=out_channels))
 
         layer_features = []
+        upscale_features = []
+        
+        P_up = self.bifpn_conv(P_in[-1]) ####### need to make a conv list because the weight must not be shared ##########
 
-        for idx in len(6):
-            i = idx + 1
-            # layer_features.insert(0, self.P_in[-])
+        for idx in len(5):
+            upscale_features.insert(0, P_up) # The upscaled P_3/2 is the same as the output
+            i = idx + 2
+            scale = (P_in[-i].size(3)/P_up.size(3))
+            P_up = self.bifpn_conv(P_in[-i] + nn.Upsample(scale_factor=scale, mode="bilinear")(P_up))
+
+        for idx in len(5):
+            P_out = self.bifpn_conv()
+            layer_features.insert(0, P_out)
 
     def bifpn_conv(self, in_channels, out_channels):
         return nn.Sequential(

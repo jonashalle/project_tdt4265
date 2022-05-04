@@ -15,12 +15,11 @@ class BiFPN(nn.Module):
 
         # Choosing the baseline EfficientNet as backbone network
         self.model = EfficientNet(phi)
-        self.net_features = [] # Need a variable that says something about the length of the feature list
+                             # Need a variable that says something about the length of the feature list
         in_channels = 256 # We simply define channel depth here, because we are not going to test a lot with this
         out_channels = 256
         self.convs = []
-        for feature in self.net_features:
-            self.convs.append(self.bifpn_conv(in_channels=in_channels, out_channels=out_channels))
+        self.phi = phi
 
 
     def bifpn_layer(self, P_in):
@@ -31,22 +30,43 @@ class BiFPN(nn.Module):
         # Make a list of a length 7, and fill it from [-1] from [-1]
         # P_2_in, P_3_in, P_4_in, P_5_in, P_6_in, P_7 = in_features
 
+        # Here we use one "forward" in each block
+        #for feature in self.net_features:
+        #    self.convs.append(self.bifpn_conv(in_channels=in_channels, out_channels=out_channels))
+
+        layer_features = []
+
+        for idx in len(6):
+            i = idx + 1
+            # layer_features.insert(0, self.P_in[-])
+
     def bifpn_conv(self, in_channels, out_channels):
         return nn.Sequential(
             nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
-                kernel_size=3,
+                kernel_size=1,
                 stride=1,
-                padding=1
+                padding=0
             ),
             nn.ReLU(),
-            nn.BatchNorm2d(num_features=out_channels),
+            nn.BatchNorm2d(num_features=out_channels), # To normalize weights in the fusion
         )
 
 
     def forward(self, x):
         input_features = self.model.forward(x)
+
+        input_features = input_features[-6:] # We only need the six last features
+
+        out_features = self.bifpn_layer(input_features)
+        out_features = self.bifpn_layer(input_features)
+        out_features = self.bifpn_layer(input_features)
+
+        for i in self.phi:
+            out_features = self.bifpn_layer(input_features)
+
+        return out_features
 
 class EfficientNet(nn.Module):
     """

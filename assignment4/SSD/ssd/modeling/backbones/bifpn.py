@@ -15,17 +15,20 @@ class BiFPN(nn.Module):
         self.model = EfficientNet(phi)
 
         self.num_features = 6 # Number to take out of the BiFPN, is 5 in the paper, but 6 is chosen here
-        self.num_channels = 64
+        self.out_channels = [256, 256, 256, 256, 256, 256]
+        self.in_channels = [40, 80, 112, 192, 320, 1280] # Works for EfficientNet-b0 and b1
+
         self.phi = phi
     
         self.conv_td = []
         self.conv_out = []
+        self.scale_conv = []
 
         # Making convolutional layers for upscale and downscale use
-        self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
-        for _ in range(self.num_features - 1):
-            self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
-            self.conv_out.append(self.bifpn_conv(self.num_channels, self.num_channels))
+        # self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
+        # for _ in range(self.num_features - 1):
+        #     self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
+        #     self.conv_out.append(self.bifpn_conv(self.num_channels, self.num_channels))
 
     def bifpn_layer(self, input_features):
         """
@@ -34,10 +37,15 @@ class BiFPN(nn.Module):
         """
         layer_features = []
         td_features = []
+        
 
         # Upsample network
-        P_td = self.conv_td[-1](input_features[-1])
+        print(f"Inputfeature: {input_features[-4].size(1)}")
+        print(f"What is conv: {self.conv_td[-1]}")
 
+
+        P_td = self.conv_td[-1](input_features[-1])
+        print(f"Size of P_td: {P_td.shape}")
         for idx in range(self.num_features - 1):
             i = idx + 2
             # Making the upscale feature list back wards
@@ -71,31 +79,20 @@ class BiFPN(nn.Module):
             nn.BatchNorm2d(num_features=out_channels), # To normalize weights in the fusion
         )
 
-    # def conv_td(self, in_channels, out_channels):
-    #     """
-    #     Helper function making the intermediate convolutions
-    #     """
-    #     conv_td = []
-
-    #     for _ in range(6):
-    #         conv_td.append(self.bifpn_conv(in_channels, out_channels))
-
-    #     return conv_td
-
-    # def conv_out(self, in_channels, out_channels):
-    #     """
-    #     Helper function making the output convolution
-    #     """
-    #     conv_out = []
-
-    #     for _ in range(5):
-    #         conv_out.append(self.bifpn_conv(in_channels, out_channels))
-
-    #     return conv_out
     def forward(self, x):
         input_features = self.model.forward(x)
 
         input_features = input_features[-6:] # We only need the six last features
+
+        for idx, features in enumerate(input_features):
+            print(f"Feature size {idx}: {features.shape}")
+
+        """
+        In order to make the BiFPN work we need to
+        convert all the channels from the input_features to one channel depth
+        This can be done using a convolutional layer with kernel size 1 and no bias or padding.
+        these layers must be initiated with ones as weights and will be made new for very forward pass.
+        """
 
         # Depth of the BiFPN is 3 + phi
         out_features = self.bifpn_layer(input_features) 

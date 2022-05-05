@@ -12,16 +12,19 @@ from vizer.draw import draw_boxes
 from tops.checkpointer import load_checkpoint
 from pathlib import Path
 import numpy as np
+
 import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 warnings.simplefilter('ignore')
+
 import cv2
 from pytorch_grad_cam import AblationCAM, EigenCAM
 from pytorch_grad_cam.ablation_layer import AblationLayerFasterRCNN
 from pytorch_grad_cam.utils.model_targets import FasterRCNNBoxScoreTarget
 from pytorch_grad_cam.utils.reshape_transforms import fasterrcnn_reshape_transform
 from pytorch_grad_cam.utils.image import show_cam_on_image, scale_accross_batch_and_channels, scale_cam_image
+
 
 
 import requests
@@ -45,6 +48,7 @@ def draw_b(boxes, labels, classes, image):
         #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2,
         #             lineType=cv2.LINE_AA)
     return image
+
 
 @torch.no_grad()
 @click.command()
@@ -74,10 +78,10 @@ def cam(config_path: Path, score_threshold: float):
         gpu_transform = instantiate(cfg.data_val.gpu_transform)
     cpu_transform = instantiate(cfg.data_val.dataset.transform)
     gpu_transform = instantiate(cfg.data_val.gpu_transform)
-    for j in range(1):
+    for j in range(0):
         print('Loop number: ', j)
         o = j+4
-        for i in range(100):
+        for i in range(0):
             image_name = 'data/tdt4265_2022/images/train/trip007_glos_Video0000{}_{}.png'.format(o,i)
             orig_img = np.array(Image.open(image_name).convert("RGB"))
         
@@ -91,6 +95,7 @@ def cam(config_path: Path, score_threshold: float):
             boxes[:, [1, 3]] *= height
             boxes, categories, scores = [_.cpu().numpy() for _ in [boxes, categories, scores]]
  
+
 
             total_score = torch.from_numpy(scores)
             input_tensor = img
@@ -119,15 +124,7 @@ def cam(config_path: Path, score_threshold: float):
             path = "CAM_figures/video{}/img{}".format(o,i)
             plt.savefig(path)
         
-    '''
-    Error message:
-    loss = sum([target(output) for target, output in zip(targets, outputs)]) 
-    TypeError: 'Tensor' object is not callable
 
-    zip(targets, outputs), line 81 i base_cam.py
-    targets: List[torch.nn.Module]
-    outputs: self.activation_and_grads(input_tensor)
-    '''
 if __name__ == '__main__':
     cam()
 

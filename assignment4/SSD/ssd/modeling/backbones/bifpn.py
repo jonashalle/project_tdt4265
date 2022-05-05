@@ -1,5 +1,3 @@
-import enum
-from turtle import back
 import torch.nn as nn
 import torchvision.models as models
 
@@ -15,12 +13,19 @@ class BiFPN(nn.Module):
 
         # Choosing the baseline EfficientNet as backbone network
         self.model = EfficientNet(phi)
-                             # Need a variable that says something about the length of the feature list
-        in_channels = 256 # We simply define channel depth here, because we are not going to test a lot with this
-        out_channels = 256
-        self.convs = []
-        self.phi = phi
 
+        self.num_features = 6 # Number to take out of the BiFPN, is 5 in the paper, but 6 is chosen here
+        self.num_channels = 64
+        self.phi = phi
+    
+        self.conv_td = []
+        self.conv_out = []
+
+        # Making convolutional layers for upscale and downscale use
+        self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
+        for _ in range(self.num_features - 1):
+            self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
+            self.conv_out.append(self.bifpn_conv(self.num_channels, self.num_channels))
 
     def bifpn_layer(self, P_in):
         """
@@ -35,19 +40,29 @@ class BiFPN(nn.Module):
         #    self.convs.append(self.bifpn_conv(in_channels=in_channels, out_channels=out_channels))
 
         layer_features = []
-        upscale_features = []
+        td_features = []
         
-        P_up = self.bifpn_conv(P_in[-1]) ####### need to make a conv list because the weight must not be shared ##########
+        # Makes two lists of convs
 
-        for idx in len(5):
-            upscale_features.insert(0, P_up) # The upscaled P_3/2 is the same as the output
+        # Upsample network
+        P_td = self.conv_td[-1](P_in[-1])
+
+        for idx in range(self.num_features - 1):
+            # Making the upscale feature list back wards
+            td_features.insert(0, P_td) # The upscaled P_3/2 is the same as the output, so we don't save it as td
             i = idx + 2
-            scale = (P_in[-i].size(3)/P_up.size(3))
-            P_up = self.bifpn_conv(P_in[-i] + nn.Upsample(scale_factor=scale, mode="bilinear")(P_up))
+            scale = (P_in[-i].size(3)/P_td.size(3))
+            # Last pass through P_2_td = P_out
+            P_td = self.conv_td[-i](P_in[-i] + nn.Upsample(scale_factor=scale, mode="bilinear")(P_td))
 
-        for idx in len(5):
+        P_out = P_td
+
+        # Making the output feature list the right way around
+        layer_features.append(P_out)
+        # Downsample network
+        for idx in range(self.num_features - 1):
             P_out = self.bifpn_conv()
-            layer_features.insert(0, P_out)
+            layer_features.append(0, P_out)
 
     def bifpn_conv(self, in_channels, out_channels):
         return nn.Sequential(
@@ -62,13 +77,34 @@ class BiFPN(nn.Module):
             nn.BatchNorm2d(num_features=out_channels), # To normalize weights in the fusion
         )
 
+    # def conv_td(self, in_channels, out_channels):
+    #     """
+    #     Helper function making the intermediate convolutions
+    #     """
+    #     conv_td = []
 
+    #     for _ in range(6):
+    #         conv_td.append(self.bifpn_conv(in_channels, out_channels))
+
+    #     return conv_td
+
+    # def conv_out(self, in_channels, out_channels):
+    #     """
+    #     Helper function making the output convolution
+    #     """
+    #     conv_out = []
+
+    #     for _ in range(5):
+    #         conv_out.append(self.bifpn_conv(in_channels, out_channels))
+
+    #     return conv_out
     def forward(self, x):
         input_features = self.model.forward(x)
 
         input_features = input_features[-6:] # We only need the six last features
 
-        out_features = self.bifpn_layer(input_features)
+        # Depth of the BiFPN is 3 + phi
+        out_features = self.bifpn_layer(input_features) 
         out_features = self.bifpn_layer(input_features)
         out_features = self.bifpn_layer(input_features)
 
@@ -88,11 +124,14 @@ class EfficientNet(nn.Module):
         assert phi < 7 and phi >= 0, \
             f"Expected a number between 0 and 7, got {phi}"
         
-        backbones = [models.efficientnet_b0(pretrained=True), models.efficientnet_b1(pretrained=True), models.efficientnet_b2(pretrained=True),
-                    models.efficientnet_b3(pretrained=True), models.efficientnet_b4(pretrained=True), models.efficientnet_b5(pretrained=True), models.efficientnet_b6(pretrained=True)]
+        # backbones = [models.efficientnet_b0(pretrained=True), models.efficientnet_b1(pretrained=True), models.efficientnet_b2(pretrained=True),
+        #             models.efficientnet_b3(pretrained=True), models.efficientnet_b4(pretrained=True), models.efficientnet_b5(pretrained=True), models.efficientnet_b6(pretrained=True)]
         
+        backbones = [models.efficientnet_b0, models.efficientnet_b1, models.efficientnet_b2,
+                     models.efficientnet_b3, models.efficientnet_b4, models.efficientnet_b5, models.efficientnet_b6]
+
         # self.model = nn.Sequential(*list(backbones[phi].children())[:-2])
-        self.model = backbones[phi]
+        self.model = backbones[phi](pretrained=True)
 
     def forward(self, x):
         out_features = []

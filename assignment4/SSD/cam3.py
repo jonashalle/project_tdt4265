@@ -17,11 +17,12 @@ import torchvision
 from PIL import Image
 def predict(input_tensor, model, device, detection_threshold):
     outputs = model(input_tensor)
+    print((input_tensor))
     pred_classes = [coco_names[i] for i in outputs[0]['labels'].cpu().numpy()]
     pred_labels = outputs[0]['labels'].cpu().numpy()
     pred_scores = outputs[0]['scores'].detach().cpu().numpy()
     pred_bboxes = outputs[0]['boxes'].detach().cpu().numpy()
-
+    pred_bboxes = boxes
     
     boxes, classes, labels, indices = [], [], [], []
     for index in range(len(pred_scores)):
@@ -86,25 +87,3 @@ model.eval().to(device)
 # Run the model and display the detections
 boxes, classes, labels, indices = predict(input_tensor, model, device, 0.9)
 image = draw_boxes(boxes, labels, classes, image)
-
-# Show the image:
-Image.fromarray(image)
-
-print('labels----------',labels)
-
-
-target_layers = [model.backbone]
-targets = [FasterRCNNBoxScoreTarget(labels=labels, bounding_boxes=boxes)]
-cam = EigenCAM(model,
-               target_layers, 
-               use_cuda=torch.cuda.is_available(),
-               reshape_transform=fasterrcnn_reshape_transform)
-
-grayscale_cam = cam(input_tensor, targets=targets)
-# Take the first image in the batch:
-grayscale_cam = grayscale_cam[0, :]
-cam_image = show_cam_on_image(image_float_np, grayscale_cam, use_rgb=True)
-# And lets draw the boxes again:
-image_with_bounding_boxes = draw_boxes(boxes, labels, classes, cam_image)
-Image.fromarray(image_with_bounding_boxes)
-

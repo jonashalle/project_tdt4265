@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
-
+import torch.nn.functional as F
 
 class BiFPN(nn.Module):
     """
@@ -27,42 +27,36 @@ class BiFPN(nn.Module):
             self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
             self.conv_out.append(self.bifpn_conv(self.num_channels, self.num_channels))
 
-    def bifpn_layer(self, P_in):
+    def bifpn_layer(self, input_features):
         """
         Takes in a list that is 6 long with P_2 to P_7. 
         Since we have six levels in our SSD model, we choose to widen the BiFPN with one feature for practicality.
         """
-        # Make a list of a length 7, and fill it from [-1] from [-1]
-        # P_2_in, P_3_in, P_4_in, P_5_in, P_6_in, P_7 = in_features
-
-        # Here we use one "forward" in each block
-        #for feature in self.net_features:
-        #    self.convs.append(self.bifpn_conv(in_channels=in_channels, out_channels=out_channels))
-
         layer_features = []
         td_features = []
-        
-        # Makes two lists of convs
 
         # Upsample network
-        P_td = self.conv_td[-1](P_in[-1])
+        P_td = self.conv_td[-1](input_features[-1])
 
         for idx in range(self.num_features - 1):
-            # Making the upscale feature list back wards
-            td_features.insert(0, P_td) # The upscaled P_3/2 is the same as the output, so we don't save it as td
             i = idx + 2
-            scale = (P_in[-i].size(3)/P_td.size(3))
-            # Last pass through P_2_td = P_out
-            P_td = self.conv_td[-i](P_in[-i] + nn.Upsample(scale_factor=scale, mode="bilinear")(P_td))
+            # Making the upscale feature list back wards
+            td_features.insert(0, P_td) # The upscaled P_2 is the same as the output, so we don't save it as td
+            scale = (input_features[-i].size(3)/P_td.size(3))
+            P_td = self.conv_td[-i](input_features[-i] + nn.Upsample(scale_factor=scale, mode="bilinear")(P_td))
 
+        # Last pass through P_2_td = P_2_out
         P_out = P_td
 
         # Making the output feature list the right way around
         layer_features.append(P_out)
+
         # Downsample network
-        for idx in range(self.num_features - 1):
-            P_out = self.bifpn_conv()
-            layer_features.append(0, P_out)
+        for p_in, p_td, conv_out in zip(input_features[1:], td_features, self.conv_out):
+            P_out = conv_out(p_in + p_td + F.interpolate(P_out, p_td.size()[2:]))
+            layer_features.append(P_out)
+
+        return layer_features
 
     def bifpn_conv(self, in_channels, out_channels):
         return nn.Sequential(
@@ -105,11 +99,11 @@ class BiFPN(nn.Module):
 
         # Depth of the BiFPN is 3 + phi
         out_features = self.bifpn_layer(input_features) 
-        out_features = self.bifpn_layer(input_features)
-        out_features = self.bifpn_layer(input_features)
+        out_features = self.bifpn_layer(out_features)
+        out_features = self.bifpn_layer(out_features)
 
         for i in self.phi:
-            out_features = self.bifpn_layer(input_features)
+            out_features = self.bifpn_layer(out_features)
 
         return out_features
 

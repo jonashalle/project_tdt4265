@@ -62,11 +62,10 @@ def cam(config_path: Path, score_threshold: float):
         orig_img, boxes, categories, scores).astype(np.uint8)
     im = Image.fromarray(drawn_image)
     
-    print('scores len',len(scores))
-
-
-
-
+    print('_____________-----------------------_____________')
+    print(boxes)
+    print(categories)
+    print(scores)
     
     plt1.imshow(orig_img)
     plt1.show()

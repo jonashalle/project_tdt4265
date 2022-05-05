@@ -1,51 +1,78 @@
-import sys
-assert sys.version_info >= (3, 7), "This code requires python version >= 3.7"
-import functools
-import time
-import click
+
+import torchvision
 import torch
-import pprint
-import tops
 import tqdm
-from pathlib import Path
-from ssd.evaluate import evaluate
+import click
+import numpy as np
+import tops
 from ssd import utils
 from tops.config import instantiate
-from tops import logger, checkpointer
-from torch.optim.lr_scheduler import ChainedScheduler
-from omegaconf import OmegaConf
-torch.backends.cudnn.benchmark = True
+from PIL import Image
+from vizer.draw import draw_boxes
+from tops.checkpointer import load_checkpoint
+from pathlib import Path
+import matplotlib as plt
+import numpy as np
+import matplotlib.pyplot as plt1
 
-def class_activation_map(model, image):
-    with torch.cuda.amp.autocast(enabled=tops.AMP()):
-            bbox_delta, confs = model(batch["image"])
-            loss, to_log = model.loss_func(bbox_delta, confs, batch["boxes"], batch["labels"])
-
-    prediction = model.forward(image)
-
-
-
+@torch.no_grad()
 @click.command()
-@click.argument("config_path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-def cam(config_path):
-    logger.logger.DEFAULT_SCALAR_LEVEL = logger.logger.DEBUG
+@click.argument("config_path", type=click.Path(exists=True, dir_okay=False, path_type=str))
+
+@click.option("-s", "--score_threshold", type=click.FloatRange(min=0, max=1), default=.65)
+def cam(config_path: Path, score_threshold: float):
     cfg = utils.load_config(config_path)
-    print_config(cfg)
-
-    cocoGt = dataloader_val.dataset.get_annotations_as_coco()
     model = tops.to_cuda(instantiate(cfg.model))
-    optimizer = instantiate(cfg.optimizer, params=utils.tencent_trick(model))
-    scheduler = ChainedScheduler(instantiate(list(cfg.schedulers.values()), optimizer=optimizer))
-    checkpointer.register_models(
-        dict(model=model, optimizer=optimizer, scheduler=scheduler))
-    total_time = 0
-    tops.print_module_summary(model, (dummy_input,))
+    model.eval()
+    ckpt = load_checkpoint(cfg.output_dir.joinpath("checkpoints"), map_location=tops.get_device())
+    model.load_state_dict(ckpt["model"])
+    dataset_to_visualize = "train" # or "val"
+    cfg.train.batch_size = 1
+    if dataset_to_visualize == "train":
+        # Remove GroundTruthBoxesToAnchors transform
+        if cfg.data_train.dataset._target_ == torch.utils.data.ConcatDataset:
+            for dataset in cfg.data_train.dataset.datasets:
+                dataset.transform.transforms = dataset.transform.transforms[:-1]
+        else:
+            cfg.data_train.dataset.transform.transforms = cfg.data_train.dataset.transform.transforms[:-1]
+        dataset = instantiate(cfg.data_train.dataloader)
+        gpu_transform = instantiate(cfg.data_train.gpu_transform)
+    else:
+        cfg.data_val.dataloader.collate_fn = utils.batch_collate
+        dataset = instantiate(cfg.data_val.dataloader) 
+        gpu_transform = instantiate(cfg.data_val.gpu_transform)
 
-    if checkpointer.has_checkpoint():
-        train_state = checkpointer.load_registered_models(load_best=False)
-        total_time = train_state["total_time"]
-        logger.log(f"Resuming train from: epoch: {logger.epoch()}, global step: {logger.global_step()}")
+
+    cpu_transform = instantiate(cfg.data_val.dataset.transform)
+    gpu_transform = instantiate(cfg.data_val.gpu_transform)
     
-    tops.print_module_summary(model, (dummy_input,))
+    image_name = 'data/tdt4265_2022/images/train/trip007_glos_Video00000_7.png'
+    orig_img = np.array(Image.open(image_name).convert("RGB"))
+    
+    height, width = orig_img.shape[:2]
+    img = cpu_transform({"image": orig_img})["image"].unsqueeze(0)
+    img = tops.to_cuda(img)
+    img = gpu_transform({"image": img})["image"]
+    boxes, categories, scores = model(img,score_threshold=score_threshold)[0]
+    print(scores)
+    boxes[:, [0, 2]] *= width
+    boxes[:, [1, 3]] *= height
+    boxes, categories, scores = [_.cpu().numpy() for _ in [boxes, categories, scores]]
+    drawn_image = draw_boxes(
+        orig_img, boxes, categories, scores).astype(np.uint8)
+    im = Image.fromarray(drawn_image)
+    
+    print('scores len',len(scores))
 
-    return 1
+
+
+
+    
+    plt1.imshow(orig_img)
+    plt1.show()
+    
+    plt1.imshow(im)
+    plt1.show()
+
+if __name__ == '__main__':
+    cam()

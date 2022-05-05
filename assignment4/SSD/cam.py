@@ -14,6 +14,12 @@ from pathlib import Path
 import matplotlib as plt
 import numpy as np
 import matplotlib.pyplot as plt1
+import cv2
+from pytorch_grad_cam import AblationCAM, EigenCAM
+from pytorch_grad_cam.ablation_layer import AblationLayerFasterRCNN
+from pytorch_grad_cam.utils.model_targets import FasterRCNNBoxScoreTarget
+from pytorch_grad_cam.utils.reshape_transforms import fasterrcnn_reshape_transform
+from pytorch_grad_cam.utils.image import show_cam_on_image, scale_accross_batch_and_channels, scale_cam_image
 
 @torch.no_grad()
 @click.command()
@@ -65,14 +71,51 @@ def cam(config_path: Path, score_threshold: float):
     print('scores len',len(scores))
 
 
+    total_score = torch.from_numpy(scores)
+    input_tensor = img
+    image_float_np = np.float32(orig_img)/255
+    labels = categories
+    classes = ("background", "car", "truck", "bus", "motorcycle", "bicycle", "scooter", "person", "rider")
+    # plt1.imshow(orig_img)
+    # plt1.show()
+    
+    # plt1.imshow(im)
+    # plt1.show()
+    #print(torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True).backbone)
+    #print(type(torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True).backbone))
+    fpn_model = model.feature_extractor
+    target_layers = [fpn_model.model.model.layer4]
+    print(target_layers)
+    print(type(target_layers))
+    
+    #print(target_layers)
+    targets = [total_score]             #targets = [FasterRCNNBoxScoreTarget(labels=labels, bounding_boxes=boxes)]
+    cam = EigenCAM(model,               #nn.Module
+                target_layers,          # List[nn.Module]
+                use_cuda=torch.cuda.is_available())
 
+    t = [FasterRCNNBoxScoreTarget(categories, boxes)]
+    grayscale_cam = cam(input_tensor, targets=t)    #(Tensor, List[nn.Module])
+    # Take the first image in the batch:
+    grayscale_cam = grayscale_cam[0, :]
+    cam_image = show_cam_on_image(image_float_np, grayscale_cam, use_rgb=True)
+    # And lets draw the boxes again:
+    image_with_bounding_boxes = draw_boxes(boxes, labels, classes, cam_image)
+    Image.fromarray(image_with_bounding_boxes)
 
     
-    plt1.imshow(orig_img)
-    plt1.show()
     
-    plt1.imshow(im)
-    plt1.show()
+    
+    '''
+    Error message:
+    loss = sum([target(output) for target, output in zip(targets, outputs)]) 
+    TypeError: 'Tensor' object is not callable
+
+    zip(targets, outputs), line 81 i base_cam.py
+    targets: List[torch.nn.Module]
+    outputs: self.activation_and_grads(input_tensor)
+    '''
+    
 
 if __name__ == '__main__':
     cam()

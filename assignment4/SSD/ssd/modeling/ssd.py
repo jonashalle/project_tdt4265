@@ -1,3 +1,4 @@
+from typing import OrderedDict
 import torch
 import torch.nn as nn
 from .anchor_encoder import AnchorEncoder
@@ -96,6 +97,16 @@ class SSD300(nn.Module):
                 boxes[:, [0, 2]] *= H
                 boxes[:, [1, 3]] *= W
             predictions.append((boxes, categories, scores))
+
+        ### Trying to make dict in stead of list
+        # print(f"printing pred: {predictions}")
+        # predictions = OrderedDict([
+        #     ("boxes", predictions[0][0]),
+        #     ("labels", predictions[0][1]),
+        #     ("scores", predictions[0][2])
+        # ])
+        # print(f"Print: {predictions}")
+        ###
         return predictions
 
  

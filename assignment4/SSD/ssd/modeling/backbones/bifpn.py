@@ -80,7 +80,7 @@ class BiFPN(nn.Module):
 
         # Making the output feature list the right way around,
         # Upsampling to fit anchorboxes
-        layer_features.append(nn.Upsample(size=(32, 256), mode="bilinear")(P_out))
+        layer_features.append(nn.Upsample(scale_factor=1, mode="bilinear")(P_out))
 
         # Downsample network
         for p_in, p_td, conv_out in zip(input_features[1:], td_features, self.conv_out):

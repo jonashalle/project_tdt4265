@@ -17,7 +17,7 @@ class BiFPN(nn.Module):
         self.model = EfficientNet(phi)
 
         #self.image_channels = images_channels
-        self.output_feature_sizes = output_feature_sizes
+        self.output_feature_shape = output_feature_sizes
         self.num_features = 6 # Number to take out of the BiFPN, is 5 in the paper, but 6 is chosen here
         self.out_channels = [256, 256, 256, 256, 256, 256]
         num_channels = self.out_channels[0]

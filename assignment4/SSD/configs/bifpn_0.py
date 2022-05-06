@@ -21,7 +21,7 @@ anchors = L(AnchorBoxes)(
 
 backbone = L(BiFPN)(
     phi=0, 
-    image_channels="${train.image_channels}",
+    #image_channels="${train.image_channels}",
     output_feature_sizes="${anchors.feature_sizes}"
     )
 

@@ -9,14 +9,14 @@ class BiFPN(nn.Module):
     Code inspired by work by @tristandb, code can be found at https://github.com/tristandb/EfficientDet-PyTorch/blob/master/bifpn.py 
     Inspiration is also taken from @kentaroy47 with code at https://github.com/kentaroy47/efficientdet.pytorch/blob/master/BiFPN.py
     """
-    def __init__(self, phi, images_channels = 3, output_feature_sizes = [[32, 256], [16, 128], [8, 64], [4, 32], [2, 16], [1, 8]]):
+    def __init__(self, phi, output_feature_sizes = [[32, 256], [16, 128], [8, 64], [4, 32], [2, 16], [1, 8]]):
         super().__init__()
 
 
         # Choosing the baseline EfficientNet as backbone network
         self.model = EfficientNet(phi)
 
-        self.image_channels = images_channels
+        #self.image_channels = images_channels
         self.output_feature_sizes = output_feature_sizes
         self.num_features = 6 # Number to take out of the BiFPN, is 5 in the paper, but 6 is chosen here
         self.out_channels = [256, 256, 256, 256, 256, 256]

@@ -1,3 +1,4 @@
+from torch import no_grad
 import torch.nn as nn
 import torchvision.models as models
 import torch.nn.functional as F
@@ -16,7 +17,9 @@ class BiFPN(nn.Module):
 
         self.num_features = 6 # Number to take out of the BiFPN, is 5 in the paper, but 6 is chosen here
         self.out_channels = [256, 256, 256, 256, 256, 256]
-        self.in_channels = [40, 80, 112, 192, 320, 1280] # Works for EfficientNet-b0 and b1
+        
+        if phi <= 1:
+            self.in_channels = [40, 80, 112, 192, 320, 1280] # Works for EfficientNet-b0 and b1
 
         self.phi = phi
     
@@ -24,11 +27,21 @@ class BiFPN(nn.Module):
         self.conv_out = []
         self.scale_conv = []
 
+        # Convolutional layers to convert the channels of the EfficientNet to the same number of channels to go into the BiFPN
+        for in_ch, out_ch in zip(self.in_channels):
+            self.scale_conv.append(nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=1, padding=0, stride=1, bias=False))
+
+        # The scaling layers should only multiply by 1
+        for conv in self.scale_conv:
+            if isinstance(conv, nn.Conv2d):
+                conv.weight.requires_grad = False # Making sure these convs don't learn
+                nn.init.ones_(conv.weight)
+
         # Making convolutional layers for upscale and downscale use
-        # self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
-        # for _ in range(self.num_features - 1):
-        #     self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
-        #     self.conv_out.append(self.bifpn_conv(self.num_channels, self.num_channels))
+        self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
+        for _ in range(self.num_features - 1):
+            self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
+            self.conv_out.append(self.bifpn_conv(self.num_channels, self.num_channels))
 
     def bifpn_layer(self, input_features):
         """
@@ -48,6 +61,7 @@ class BiFPN(nn.Module):
         print(f"Size of P_td: {P_td.shape}")
         for idx in range(self.num_features - 1):
             i = idx + 2
+
             # Making the upscale feature list back wards
             td_features.insert(0, P_td) # The upscaled P_2 is the same as the output, so we don't save it as td
             scale = (input_features[-i].size(3)/P_td.size(3))
@@ -80,9 +94,16 @@ class BiFPN(nn.Module):
         )
 
     def forward(self, x):
+        P_in = []
         input_features = self.model.forward(x)
 
-        input_features = input_features[-6:] # We only need the six last features
+        input_features = input_features[-6:] # Only need the six last features
+
+        with no_grad: # It is not desired to train the weights, but simply change depth
+            for conv2d, feature in zip(self.scale_conv, input_features):
+               P_in.append(conv2d(feature)) 
+
+        input_features = P_in
 
         for idx, features in enumerate(input_features):
             print(f"Feature size {idx}: {features.shape}")

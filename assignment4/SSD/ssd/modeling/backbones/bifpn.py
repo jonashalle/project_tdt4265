@@ -125,7 +125,7 @@ class BiFPN(nn.Module):
         out_features = self.bifpn_layer(out_features)
         out_features = self.bifpn_layer(out_features)
 
-        for i in self.phi:
+        for i in range(self.phi):
             out_features = self.bifpn_layer(out_features)
 
         return out_features

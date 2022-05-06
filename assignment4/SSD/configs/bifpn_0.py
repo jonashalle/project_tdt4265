@@ -21,7 +21,7 @@ anchors = L(AnchorBoxes)(
 
 backbone = L(BiFPN)(phi=0)
 
-alpha = [0.01, 1, 1, 1, 1, 1, 1, 1, 1]
+alpha = [0.01, 1, 1, 1, 1, 1, 1, 1, 1] # When Bifpn is done, put in the best alpha here
 loss_objective = L(RetinaFocalLoss)(anchors=anchors, alpha=alpha)
 
 model = L(RetinaNetSharedHeads)(

@@ -81,9 +81,9 @@ class BiFPN(nn.Module):
         layer_features.append(upscale[-1](P_out))
 
         # Downsample network
-        for p_in, p_td, conv_out, up in zip(input_features[1:], td_features, self.conv_out, upscale[1:]):
+        for idx, p_in, p_td, conv_out, up in enumerate(zip(input_features[1:], td_features, self.conv_out)):
             P_out = conv_out(p_in + p_td + F.interpolate(P_out, p_td.size()[2:]))
-            layer_features.append(up(P_out))
+            layer_features.append(up[-(i-1)](P_out))
 
         return layer_features
 

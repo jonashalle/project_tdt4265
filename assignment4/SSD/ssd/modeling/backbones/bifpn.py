@@ -80,7 +80,8 @@ class BiFPN(nn.Module):
         upscale = self.upscale()
         layer_features.append(upscale[-1](P_out))
 
-        upscale = upscale[:-2].reverse()
+        upscale = upscale[:5]
+        upscale = upscale.reverse()
 
         # Downsample network
         for p_in, p_td, conv_out, up in zip(input_features[1:], td_features, self.conv_out, upscale):

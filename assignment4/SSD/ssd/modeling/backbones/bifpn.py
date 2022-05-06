@@ -172,6 +172,7 @@ class EfficientNet(nn.Module):
 
         for _, feature in enumerate(*list(self.model.children())[:-2]):
             x = feature(x)
+            print(f"Feature sahpe: {x.shape}")
             out_features.append(x)
         
         return out_features
@@ -180,9 +181,11 @@ class EfficientNet(nn.Module):
     def trial(self):
         print("Here!")
         for idx, feature in enumerate(*list(self.model.children())[:-2]):
-            print(f"Feature {idx}: {feature}")
+            for layer in feature:
+                if isinstance(layer, nn.Conv2d):
+                    print(f"Feature {idx}: {feature.shape}")
 
 
 
 # model = EfficientNet(0)
-# model.trial()
+#model.trial()

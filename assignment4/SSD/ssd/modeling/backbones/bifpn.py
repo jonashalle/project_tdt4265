@@ -78,8 +78,9 @@ class BiFPN(nn.Module):
         # Last pass through P_2_td = P_2_out
         P_out = P_td
 
-        # Making the output feature list the right way around
-        layer_features.append(P_out)
+        # Making the output feature list the right way around,
+        # Upsampling to fit anchorboxes
+        layer_features.append(nn.Upsample(scale_factor=2, mode="bilinear")(P_out))
 
         # Downsample network
         for p_in, p_td, conv_out in zip(input_features[1:], td_features, self.conv_out):

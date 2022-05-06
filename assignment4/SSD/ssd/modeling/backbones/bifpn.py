@@ -1,3 +1,4 @@
+from numpy import size
 from torch import no_grad
 import torch.nn as nn
 import torchvision.models as models
@@ -47,10 +48,6 @@ class BiFPN(nn.Module):
             self.conv_td.append(self.bifpn_conv(num_channels, num_channels).to("cuda"))
             self.conv_out.append(self.bifpn_conv(num_channels, num_channels).to("cuda"))
 
-        # self.conv_td.to("cuda")
-        # self.conv_out.to("cuda")
-        # self.scale_conv.to("cuda")
-
     def bifpn_layer(self, input_features):
         """
         Takes in a list that is 6 long with P_2 to P_7. 
@@ -79,13 +76,14 @@ class BiFPN(nn.Module):
         P_out = P_td
 
         # Making the output feature list the right way around,
-        # Upsampling to fit anchorboxes
-        layer_features.append(nn.Upsample(scale_factor=1, mode="bilinear")(P_out))
+        # Upsampling to fit default feature_sizes
+        upscale = self.upscale()
+        layer_features.append(upscale[-1](P_out))
 
         # Downsample network
-        for p_in, p_td, conv_out in zip(input_features[1:], td_features, self.conv_out):
+        for p_in, p_td, conv_out, up in zip(input_features[1:], td_features, self.conv_out, upscale[1:]):
             P_out = conv_out(p_in + p_td + F.interpolate(P_out, p_td.size()[2:]))
-            layer_features.append(P_out)
+            layer_features.append(up(P_out))
 
         return layer_features
 
@@ -101,6 +99,14 @@ class BiFPN(nn.Module):
             nn.ReLU(),
             nn.BatchNorm2d(num_features=out_channels), # To normalize weights in the fusion
         )
+    
+    def upscale(self):
+        upscale = []
+
+        for i in range(self.num_features):
+            upscale.append(nn.Upsample(size=(pow(2, i+1), pow(2, i+3)), mode="bilinear"))
+
+        return upscale
 
     def forward(self, x):
         P_in = []

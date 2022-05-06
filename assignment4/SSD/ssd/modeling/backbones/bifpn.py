@@ -66,7 +66,7 @@ class BiFPN(nn.Module):
             # Making the upscale feature list back wards
             td_features.insert(0, P_td) # The upscaled P_2 is the same as the output, so we don't save it as td
             scale = (input_features[-i].size(3)/P_td.size(3))
-            P_td = self.conv_td[-i](input_features[-i] + nn.Upsample(scale_factor=scale, mode="bilinear")(P_td))
+            P_td = self.conv_td[-i](input_features[-i] + nn.Upsample(scale_factor=scale, mode="bilinear", align_corners=False)(P_td))
 
         # Last pass through P_2_td = P_2_out
         P_out = P_td
@@ -109,7 +109,7 @@ class BiFPN(nn.Module):
         upscale = []
 
         for i in range(self.num_features):
-            upscale.append(nn.Upsample(size=(pow(2, i), pow(2, i+3)), mode="bilinear"))
+            upscale.append(nn.Upsample(size=(pow(2, i), pow(2, i+3)), mode="bilinear", align_corners=False))
 
         return upscale
 

@@ -17,7 +17,6 @@ class BiFPN(nn.Module):
         # Choosing the baseline EfficientNet as backbone network
         self.model = EfficientNet(phi)
 
-        #self.image_channels = images_channels
         self.output_feature_shape = output_feature_sizes
         self.num_features = 6 # Number to take out of the BiFPN, is 5 in the paper, but 6 is chosen here
         self.out_channels = [256, 256, 256, 256, 256, 256]
@@ -25,6 +24,9 @@ class BiFPN(nn.Module):
         
         if phi <= 1:
             self.in_channels = [40, 80, 112, 192, 320, 1280] # Works for EfficientNet-b0 and b1
+
+        assert phi > 2 and phi <= 7, \
+            f"BiFPN has not yet been implemented for {phi}"
 
         self.phi = phi
     
@@ -56,12 +58,8 @@ class BiFPN(nn.Module):
         layer_features = []
         td_features = []
         
-        # print(f"Inputfeature: {input_features[-4].size(1)}")
-        # print(f"What is conv: {self.conv_td[-1]}")
-
         # Upsample network
         P_td = self.conv_td[-1](input_features[-1])
-        # print(f"Size of P_td: {P_td.shape}")
         for idx in range(self.num_features - 1):
             i = idx + 2
 
@@ -78,8 +76,8 @@ class BiFPN(nn.Module):
         upscale = self.upscale()
         layer_features.append(upscale[-1](P_out))
         
-        i = 2
         # Downsample network
+        i = 2
         for p_in, p_td, conv_out in zip(input_features[1:], td_features, self.conv_out):
             P_out = conv_out(p_in + p_td + F.interpolate(P_out, p_td.size()[2:]))
             layer_features.append(upscale[-i](P_out))
@@ -88,6 +86,9 @@ class BiFPN(nn.Module):
         return layer_features
 
     def bifpn_conv(self, in_channels, out_channels):
+        """
+        Helper function for making BiFPN nodes
+        """
         return nn.Sequential(
             nn.Conv2d(
                 in_channels=in_channels,
@@ -101,6 +102,10 @@ class BiFPN(nn.Module):
         )
     
     def upscale(self):
+        """
+        Helper function for scaling the feature maps of the BiFPN,
+        to fit our desired feature sizes
+        """
         upscale = []
 
         for i in range(self.num_features):
@@ -109,6 +114,10 @@ class BiFPN(nn.Module):
         return upscale
 
     def forward(self, x):
+        """
+        Simple forward pulling 
+        """
+
         P_in = []
         input_features = self.model.forward(x)
 
@@ -120,24 +129,17 @@ class BiFPN(nn.Module):
 
         input_features = P_in
 
-        # for idx, features in enumerate(input_features):
-        #     print(f"Feature size {idx}: {features.shape}")
-
-        """
-        In order to make the BiFPN work we need to
-        convert all the channels from the input_features to one channel depth
-        This can be done using a convolutional layer with kernel size 1 and no bias or padding.
-        these layers must be initiated with ones as weights and will be made new for very forward pass.
-        """
 
         # Depth of the BiFPN is 3 + phi
         out_features = self.bifpn_layer(input_features) 
         out_features = self.bifpn_layer(out_features)
         out_features = self.bifpn_layer(out_features)
 
+        # Adding a depth layer for every number over 3
         for i in range(self.phi):
             out_features = self.bifpn_layer(out_features)
 
+        # Assertion check for good measure
         for idx, feature in enumerate(out_features):
             out_channel = self.out_channels[idx]
             h, w = self.output_feature_shape[idx]
@@ -151,7 +153,7 @@ class BiFPN(nn.Module):
 
 class EfficientNet(nn.Module):
     """
-    Implementaton of baseline EfficientNet
+    Implementaton of EfficientNet as backbone to the BiFPN
     """
 
     def __init__(self, phi = 0):

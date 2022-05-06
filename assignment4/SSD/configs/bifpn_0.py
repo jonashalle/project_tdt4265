@@ -13,7 +13,7 @@ anchors = L(AnchorBoxes)(
     # aspect ratio is used to define two boxes per element in the list.
     # if ratio=[2], boxes will be created with ratio 1:2 and 2:1
     # Number of boxes per location is in total 2 + 2 per aspect ratio
-    aspect_ratios=[[2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]], #Original
+    aspect_ratios=[[2, 3], [2, 3], [2, 5], [2, 5], [2, 3], [2, 3]], #Original
     image_shape="${train.imshape}",
     scale_center_variance=0.1,
     scale_size_variance=0.2
@@ -25,7 +25,7 @@ backbone = L(BiFPN)(
     output_feature_sizes="${anchors.feature_sizes}"
     )
 
-alpha = [0.01, 1, 1, 1, 1, 1, 1, 1, 1] # When Bifpn is done, put in the best alpha here
+alpha = [0.01, 1, 10, 10, 10, 10, 10, 3, 5]
 loss_objective = L(RetinaFocalLoss)(anchors=anchors, alpha=alpha)
 
 model = L(RetinaNetSharedHeads)(

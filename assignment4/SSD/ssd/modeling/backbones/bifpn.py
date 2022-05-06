@@ -28,7 +28,7 @@ class BiFPN(nn.Module):
         self.scale_conv = []
 
         # Convolutional layers to convert the channels of the EfficientNet to the same number of channels to go into the BiFPN
-        for in_ch, out_ch in zip(self.in_channels):
+        for in_ch, out_ch in zip(self.in_channels, self.out_channels):
             self.scale_conv.append(nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=1, padding=0, stride=1, bias=False))
 
         # The scaling layers should only multiply by 1

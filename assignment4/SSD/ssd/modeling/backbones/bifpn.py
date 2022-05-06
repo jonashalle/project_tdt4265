@@ -100,9 +100,9 @@ class BiFPN(nn.Module):
 
         input_features = input_features[-6:] # Only need the six last features
 
-        with no_grad: # It is not desired to train the weights, but simply change depth
-            for conv2d, feature in zip(self.scale_conv, input_features):
-               P_in.append(conv2d(feature)) 
+        #with no_grad: # It is not desired to train the weights, but simply change depth
+        for conv2d, feature in zip(self.scale_conv, input_features):
+            P_in.append(conv2d(feature)) 
 
         input_features = P_in
 

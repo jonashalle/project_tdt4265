@@ -104,7 +104,7 @@ class BiFPN(nn.Module):
         upscale = []
 
         for i in range(self.num_features):
-            upscale.append(nn.Upsample(size=(pow(2, i+1), pow(2, i+3)), mode="bilinear"))
+            upscale.append(nn.Upsample(size=(pow(2, i), pow(2, i+3)), mode="bilinear"))
 
         return upscale
 

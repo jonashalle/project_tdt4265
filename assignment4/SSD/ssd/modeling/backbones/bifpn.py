@@ -39,7 +39,7 @@ class BiFPN(nn.Module):
                 nn.init.ones_(conv.weight)
 
         # Making convolutional layers for upscale and downscale use
-        self.conv_td.append(self.bifpn_conv(num_channels, num_channels))
+        self.conv_td.append(self.bifpn_conv(num_channels, num_channels).to("cuda"))
         for _ in range(self.num_features - 1):
             self.conv_td.append(self.bifpn_conv(num_channels, num_channels).to("cuda"))
             self.conv_out.append(self.bifpn_conv(num_channels, num_channels).to("cuda"))

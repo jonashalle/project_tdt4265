@@ -79,10 +79,11 @@ class BiFPN(nn.Module):
         # Upsampling to fit default feature_sizes
         upscale = self.upscale()
         layer_features.append(upscale[-1](P_out))
-
+        
+        print(f"Upscale before: {upscale}")
         upscale = upscale[:5]
         upscale = upscale.reverse()
-
+        print(f"Upscale after: {upscale}")
         # Downsample network
         for p_in, p_td, conv_out, up in zip(input_features[1:], td_features, self.conv_out, upscale):
             P_out = conv_out(p_in + p_td + F.interpolate(P_out, p_td.size()[2:]))

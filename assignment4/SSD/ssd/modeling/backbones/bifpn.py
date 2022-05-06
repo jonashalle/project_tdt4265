@@ -56,14 +56,12 @@ class BiFPN(nn.Module):
         layer_features = []
         td_features = []
         
+        # print(f"Inputfeature: {input_features[-4].size(1)}")
+        # print(f"What is conv: {self.conv_td[-1]}")
 
         # Upsample network
-        print(f"Inputfeature: {input_features[-4].size(1)}")
-        print(f"What is conv: {self.conv_td[-1]}")
-
-
         P_td = self.conv_td[-1](input_features[-1])
-        print(f"Size of P_td: {P_td.shape}")
+        # print(f"Size of P_td: {P_td.shape}")
         for idx in range(self.num_features - 1):
             i = idx + 2
 
@@ -122,8 +120,8 @@ class BiFPN(nn.Module):
 
         input_features = P_in
 
-        for idx, features in enumerate(input_features):
-            print(f"Feature size {idx}: {features.shape}")
+        # for idx, features in enumerate(input_features):
+        #     print(f"Feature size {idx}: {features.shape}")
 
         """
         In order to make the BiFPN work we need to

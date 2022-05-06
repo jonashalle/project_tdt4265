@@ -36,7 +36,7 @@ class BiFPN(nn.Module):
         for conv in self.scale_conv:
             if isinstance(conv, nn.Conv2d):
                 conv.weight.requires_grad = False # Making sure these convs don't learn
-                nn.init.ones_(conv.weight)
+                nn.init.ones_(conv.weight).cuda()
 
         # Making convolutional layers for upscale and downscale use
         self.conv_td.append(self.bifpn_conv(num_channels, num_channels))

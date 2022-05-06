@@ -19,7 +19,11 @@ anchors = L(AnchorBoxes)(
     scale_size_variance=0.2
 )
 
-backbone = L(BiFPN)(phi=0)
+backbone = L(BiFPN)(
+    phi=0, 
+    image_channels="${train.image_channels}",
+    output_feature_sizes="${anchors.feature_sizes}"
+    )
 
 alpha = [0.01, 1, 1, 1, 1, 1, 1, 1, 1] # When Bifpn is done, put in the best alpha here
 loss_objective = L(RetinaFocalLoss)(anchors=anchors, alpha=alpha)

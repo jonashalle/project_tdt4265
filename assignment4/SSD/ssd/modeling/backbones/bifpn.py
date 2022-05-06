@@ -9,12 +9,15 @@ class BiFPN(nn.Module):
     Code inspired by work by @tristandb, code can be found at https://github.com/tristandb/EfficientDet-PyTorch/blob/master/bifpn.py 
     Inspiration is also taken from @kentaroy47 with code at https://github.com/kentaroy47/efficientdet.pytorch/blob/master/BiFPN.py
     """
-    def __init__(self, phi):
+    def __init__(self, phi, images_channels = 3, output_feature_sizes = [[32, 256], [16, 128], [8, 64], [4, 32], [2, 16], [1, 8]]):
         super().__init__()
+
 
         # Choosing the baseline EfficientNet as backbone network
         self.model = EfficientNet(phi)
 
+        self.images_channels = images_channels
+        self.output_feature_sizes = output_feature_sizes
         self.num_features = 6 # Number to take out of the BiFPN, is 5 in the paper, but 6 is chosen here
         self.out_channels = [256, 256, 256, 256, 256, 256]
         num_channels = self.out_channels[0]
@@ -128,6 +131,15 @@ class BiFPN(nn.Module):
         for i in range(self.phi):
             out_features = self.bifpn_layer(out_features)
 
+        for idx, feature in enumerate(out_features):
+            out_channel = self.out_channels[idx]
+            h, w = self.output_feature_shape[idx]
+            expected_shape = (out_channel, h, w)
+            assert feature.shape[1:] == expected_shape, \
+                f"Expected shape: {expected_shape}, got: {feature.shape[1:]} at output IDX: {idx}"
+        assert len(out_features) == len(self.output_feature_shape),\
+            f"Expected that the length of the outputted features to be: {len(self.output_feature_shape)}, but it was: {len(out_features)}"
+
         return out_features
 
 class EfficientNet(nn.Module):
@@ -141,13 +153,9 @@ class EfficientNet(nn.Module):
         assert phi < 7 and phi >= 0, \
             f"Expected a number between 0 and 7, got {phi}"
         
-        # backbones = [models.efficientnet_b0(pretrained=True), models.efficientnet_b1(pretrained=True), models.efficientnet_b2(pretrained=True),
-        #             models.efficientnet_b3(pretrained=True), models.efficientnet_b4(pretrained=True), models.efficientnet_b5(pretrained=True), models.efficientnet_b6(pretrained=True)]
-        
         backbones = [models.efficientnet_b0, models.efficientnet_b1, models.efficientnet_b2,
                      models.efficientnet_b3, models.efficientnet_b4, models.efficientnet_b5, models.efficientnet_b6]
 
-        # self.model = nn.Sequential(*list(backbones[phi].children())[:-2])
         self.model = backbones[phi](pretrained=True)
 
     def forward(self, x):
@@ -167,5 +175,5 @@ class EfficientNet(nn.Module):
 
 
 
-model = EfficientNet(0)
-model.trial()
+# model = EfficientNet(0)
+# model.trial()

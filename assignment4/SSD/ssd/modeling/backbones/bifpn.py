@@ -17,6 +17,7 @@ class BiFPN(nn.Module):
 
         self.num_features = 6 # Number to take out of the BiFPN, is 5 in the paper, but 6 is chosen here
         self.out_channels = [256, 256, 256, 256, 256, 256]
+        num_channels = self.out_channels[0]
         
         if phi <= 1:
             self.in_channels = [40, 80, 112, 192, 320, 1280] # Works for EfficientNet-b0 and b1
@@ -38,10 +39,10 @@ class BiFPN(nn.Module):
                 nn.init.ones_(conv.weight)
 
         # Making convolutional layers for upscale and downscale use
-        self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
+        self.conv_td.append(self.bifpn_conv(num_channels, num_channels))
         for _ in range(self.num_features - 1):
-            self.conv_td.append(self.bifpn_conv(self.num_channels, self.num_channels))
-            self.conv_out.append(self.bifpn_conv(self.num_channels, self.num_channels))
+            self.conv_td.append(self.bifpn_conv(num_channels, num_channels))
+            self.conv_out.append(self.bifpn_conv(num_channels, num_channels))
 
     def bifpn_layer(self, input_features):
         """

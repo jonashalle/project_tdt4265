@@ -42,10 +42,17 @@ class RetinaNetSharedHeads(nn.Module):
                         nn.init.xavier_uniform_(param)
 
         if subnet_init == "gaussian": # Our weight and bias initialization based on the Focal loss paper
-            for layer in layers:
-                if isinstance(layer, nn.Conv2d):
-                    nn.init.normal_(layer.weight, mean=0.0,std=0.01)
-                    nn.init.zeros_(layer.bias)
+            
+            # We have to make it clear in the report, 
+            # the differences in the initializations
+            for conv in self.regression_heads:
+                if isinstance(conv, nn.Conv2d):
+                    nn.init.xavier_uniform_(conv.weight.data)
+
+            for conv in self.classification_heads:
+                if isinstance(conv, nn.Conv2d):
+                    nn.init.normal_(conv.weight, mean=0.0,std=0.01)
+                    nn.init.zeros_(conv.bias)
             p = 0.99        
             bias = np.log(p * (self.num_classes-1)/(1-p))
             nn.init.constant_(self.classification_heads[-1].bias[:self.num_boxes[0]], bias)

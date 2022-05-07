@@ -1,0 +1,55 @@
+Hei!
+
+CAM____________________
+
+Cam_figures inneholder cam sammenligninger. Har markert 1 mappe som godt egnet.
+en annen video er layer 1 og 3. kjekt å se forskjellen på dem og video kanskje?
+
+layer 4 og 2 er generelt ubrukelig. Modellen vår er så dårlig på buss og truck fra siden at det er ikke noe som skjer i videoene som de dukker opp i heller..
+
+resten av videoene er vel stort sett layer 3
+
+
+PERFORMANCE ASSESMENT TIL QUALITATIV og video_______________________________
+
+Performance assesment inneholder bilder som viser performance.
+Laget en mappe der jeg samlet mappene for de 4 modellene med best fremgang. kan vurdere å hive inn det store datasettet, men tenker at det kanskje ikke er nødvendig.
+
+
+jeg har valgt ut en håndfull bilder, de har navn som begynner med a slik at de ligger øverst i mappen. Bildene som er valgt ut er lagret for alle modellene. Lastet opp de fleste på blackboard.
+
+Det står i blackboard oppgave 3.2 hvordan dere lager flere.
+
+
+anbefaler dere å bruke det jeg har funnet, tar ganske mye tid å gå igjennom bilder..
+
+ALPHA OG ASPECT RATIO________________________________________________
+
+under er navnene på alpha med samme parameter. 2.3 er alle 2.3, den som heter best har to stk 2.5 i midten.
+
+alpha_3 har asp_rat [[2,3], [3,4], [2,5], [2,5], [3,4],[2,3]]
+tenker at den ikke trenger å være med, men den kan evt brukes til å forstå hva som foregår med tensorboard plottene
+
+outputs/alpha_all_2_3/logs/tensorboard
+outputs/alpha_best/logs/tensorboard
+outputs/alpha_3_ar/logs/tensorboard
+
+kan si at bare å endre asp_rat ikke fungerte, og bare endring i alpha ga resultater, men de fungerte best sammen. hvorfor? gud vet, forhåpentligvis dere og:):):):)
+
+
+ANALYSE_________________________
+Alle plottene som er laget finner dere i home folderen. både som eps og konvertert til png.
+jeg har skrevet utkast manus.
+De bildene dere ikke ønsker å bruke muntlig kan jo legges til i rapporten. Har lagt inn alle som figures i overleaf, så bare fjern som dere vil. 
+
+Finner det interesant at bus og sykkel er like i ratio for median, men helt forskjellig for mean.
+
+________________
+
+
+Som nevnt må dere si ifra om dere trenger hjelp..
+Lykke til i inspurten!
+
+
+Beste helsning
+Jonas

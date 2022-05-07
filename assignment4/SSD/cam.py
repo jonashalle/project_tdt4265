@@ -78,11 +78,11 @@ def cam(config_path: Path, score_threshold: float):
         gpu_transform = instantiate(cfg.data_val.gpu_transform)
     cpu_transform = instantiate(cfg.data_val.dataset.transform)
     gpu_transform = instantiate(cfg.data_val.gpu_transform)
-    for j in range(0):
+    for j in range(1):
         print('Loop number: ', j)
-        o = j+4
-        for i in range(0):
-            image_name = 'data/tdt4265_2022/images/train/trip007_glos_Video0000{}_{}.png'.format(o,i)
+        o = j+14
+        for i in range(100):
+            image_name = 'data/tdt4265_2022/images/train/trip007_glos_Video000{}_{}.png'.format(o,i)
             orig_img = np.array(Image.open(image_name).convert("RGB"))
         
             height, width = orig_img.shape[:2]

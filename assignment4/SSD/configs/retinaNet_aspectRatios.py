@@ -15,7 +15,7 @@ anchors = L(AnchorBoxes)(
     # if ratio=[2], boxes will be created with ratio 1:2 and 2:1
     # Number of boxes per location is in total 2 + 2 per aspect ratio
     #aspect_ratios=[[2, 3], [2, 3], [2, 3], [2, 3], [2], [2]], #Original
-    aspect_ratios=[[2,3], [2,3], [2,5], [2,5], [2,3],[2,3]],
+    aspect_ratios=[[2,3], [3,4], [2,5], [2,5], [3,4],[2,3]],
     image_shape="${train.imshape}",
     scale_center_variance=0.1,
     scale_size_variance=0.2
@@ -25,3 +25,6 @@ anchors = L(AnchorBoxes)(
 
 # model.anchors = anchors
 # model.loss_objective = loss_objective
+
+# alpha 2_3_2_5[[2,3], [2,3], [2,5], [2,5], [2,3],[2,3]]
+# alpha_3_ar 

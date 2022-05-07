@@ -6,6 +6,6 @@ from .bifpn_0 import model, anchors, loss_objective, backbone, train, optimizer,
 
 backbone = L(EfficientNet)(
     phi=0, 
-    output_feature_sizes="${anchors.feature_sizes}"
+    # output_feature_sizes="${anchors.feature_sizes}"
     )
 model.backbone = backbone

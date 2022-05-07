@@ -1,5 +1,3 @@
-import torch
-torch.cuda.empty_cache
 from tops.config import LazyCall as L
 from ssd.modeling import RetinaNetSharedHeads, AnchorBoxes, RetinaFocalLoss
 from ssd.modeling.backbones import BiFPN

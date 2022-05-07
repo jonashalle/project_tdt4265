@@ -25,9 +25,20 @@ class BiFPN(nn.Module):
         if phi <= 1:
             self.in_channels = [40, 80, 112, 192, 320, 1280] # Works for EfficientNet-b0 and b1
 
-        self.in_channels = [40, 80, 112, 192, 320, 1280]
-        #assert 0 <= phi <= 2, \
-        #    f"BiFPN has not yet been implemented for {phi}"
+        if phi == 2:
+            self.in_channels = [48, 88, 120, 208, 352, 1408]
+
+        if phi == 3:
+            self.in_channels = [48, 96, 136, 232, 384, 1536]
+
+        if phi == 4:
+            self.in_channels = [56, 112, 160, 272, 448, 1792]
+
+        if phi == 5:
+            self.in_channels = [64, 128, 176, 304, 512, 2048]
+
+        if phi == 6:
+            self.in_channels = [72, 144, 200, 344, 576, 2304]
 
         self.phi = phi
     
@@ -130,7 +141,6 @@ class BiFPN(nn.Module):
 
         input_features = P_in
 
-
         # Depth of the BiFPN is 3 + phi
         out_features = self.bifpn_layer(input_features) 
         out_features = self.bifpn_layer(out_features)
@@ -173,20 +183,6 @@ class EfficientNet(nn.Module):
 
         for _, feature in enumerate(*list(self.model.children())[:-2]):
             x = feature(x)
-            print(f"Feature sahpe: {x.shape}")
             out_features.append(x)
         
         return out_features
-
-
-    def trial(self):
-        print("Here!")
-        for idx, feature in enumerate(*list(self.model.children())[:-2]):
-            for layer in feature:
-                if isinstance(layer, nn.Conv2d):
-                    print(f"Feature {idx}: {feature.shape}")
-
-
-
-# model = EfficientNet(0)
-#model.trial()

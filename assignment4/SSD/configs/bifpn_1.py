@@ -8,4 +8,4 @@ backbone = L(EfficientNet)(
     phi=0, 
     # output_feature_sizes="${anchors.feature_sizes}"
     )
-model.backbone = backbone
+model.feature_extractor = backbone

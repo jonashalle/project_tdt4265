@@ -26,8 +26,8 @@ class BiFPN(nn.Module):
             self.in_channels = [40, 80, 112, 192, 320, 1280] # Works for EfficientNet-b0 and b1
 
         self.in_channels = [40, 80, 112, 192, 320, 1280]
-        assert 0 <= phi <= 2, \
-            f"BiFPN has not yet been implemented for {phi}"
+        #assert 0 <= phi <= 2, \
+        #    f"BiFPN has not yet been implemented for {phi}"
 
         self.phi = phi
     

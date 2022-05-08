@@ -4,7 +4,7 @@ from .anchor_encoder import AnchorEncoder
 from torchvision.ops import batched_nms
 import numpy as np
 
-class RetinaNetSharedHeads(nn.Module):
+class RetinaNetSubnets(nn.Module):
     def __init__(self, 
             feature_extractor: nn.Module,
             anchors,
@@ -13,22 +13,32 @@ class RetinaNetSharedHeads(nn.Module):
             subnet_init = "xavier"):
         super().__init__()
         """
-            Implements the SSD network, consisting of a five layer classification head and a parallel regression head.
-            These two heads are shared across all six resolutions of the feature extractor.
+            Implements the SSD network.
             Backbone outputs a list of features, which are gressed to SSD output with regression/classification heads.
+
+            Takes arguments:
+            feature_extractor: which is an nn.Module
+            anchors: anchor objects that determine the anchorboxes
+            loss_objective: 
+            num_classes: the number of classification classes
+            subnet_init: str which 
+
         """
 
         self.feature_extractor = feature_extractor
         self.loss_func = loss_objective
         self.num_classes = num_classes
+        self.regression_heads = []
+        self.classification_heads = []
         self.num_boxes = anchors.num_boxes_per_fmap
-        box_num = self.num_boxes[0]
-        out_ch = self.feature_extractor.out_channels[0]
-        
-        # Making the two classification heads
-        self.classification_heads = self.subnet(out_ch, box_num * self.num_classes)
-        self.regression_heads = self.subnet(out_ch, 4 * box_num)
+        self.subnet_init = subnet_init
+        # Initialize output heads that are applied to each feature map from the backbone.
+        for n_boxes, out_ch in zip(anchors.num_boxes_per_fmap, self.feature_extractor.out_channels):
+            self.regression_heads.append(self.subnet(out_ch, 4 * n_boxes))
+            self.classification_heads.append(self.subnet(out_ch, n_boxes * self.num_classes))
 
+        self.regression_heads = nn.ModuleList(self.regression_heads)
+        self.classification_heads = nn.ModuleList(self.classification_heads)
         self.anchor_encoder = AnchorEncoder(anchors)
         self._init_weights(subnet_init)
 
@@ -42,31 +52,23 @@ class RetinaNetSharedHeads(nn.Module):
                         nn.init.xavier_uniform_(param)
 
         if subnet_init == "gaussian": # Our weight and bias initialization based on the Focal loss paper
-            for layer in layers:
-                if isinstance(layer, nn.Conv2d):
-                    nn.init.normal_(layer.weight, mean=0.0,std=0.01)
-                    nn.init.zeros_(layer.bias)
+            for class_head in self.classification_heads:
+                for conv in class_head:
+                    if isinstance(conv, nn.Conv2d):
+                        nn.init.normal_(conv.weight.data, mean=0.0, std=0.01)
+                        nn.init.zeros_(conv.bias.data)
+
+            for regress_head in self.regression_heads:    
+                for conv in regress_head:
+                    if isinstance(conv, nn.Conv2d):
+                        nn.init.xavier_uniform_(conv.weight.data)
+
             p = 0.99        
-            bias = np.log(p * (self.num_classes-1)/(1-p))
-            nn.init.constant_(self.classification_heads[-1].bias[:self.num_boxes[0]], bias)
-                
-    def regress_boxes(self, features):
-        locations = []
-        confidences = []
-        for x in features:
-            bbox_delta = self.regression_heads(x).view(x.shape[0], 4, -1)
-            bbox_conf = self.classification_heads(x).view(x.shape[0], self.num_classes, -1)
-            locations.append(bbox_delta)
-            confidences.append(bbox_conf)
-        bbox_delta = torch.cat(locations, 2).contiguous()
-        confidences = torch.cat(confidences, 2).contiguous()
-        return bbox_delta, confidences
+            bias = np.log(p * (self.num_classes-1)/(1-p)) # ln
+            for n_boxes, subnet in zip(self.num_boxes, self.classification_heads):
+                nn.init.constant_(subnet[-1].bias.data[:n_boxes], bias)
 
     def subnet(self, in_channels, out_channels):
-        """
-        Helper function for making the classification and regression heads.
-        This is a direct implementation of the one that can be found in the paper "Focal loss for dense object detection"
-        """
         return nn.Sequential(
         nn.Conv2d(
             in_channels = in_channels,
@@ -106,9 +108,21 @@ class RetinaNetSharedHeads(nn.Module):
             kernel_size = 3,
             stride = 1,
             padding = 1
-        ),
-        # A Softmax is added at the end of the head in the loss function 
-        )    
+        ), 
+        ) #Softmax in loss function      
+        
+    def regress_boxes(self, features):
+        locations = []
+        confidences = []
+        for idx, x in enumerate(features):
+            bbox_delta = self.regression_heads[idx](x).view(x.shape[0], 4, -1)
+            bbox_conf = self.classification_heads[idx](x).view(x.shape[0], self.num_classes, -1)
+            locations.append(bbox_delta)
+            confidences.append(bbox_conf)
+        bbox_delta = torch.cat(locations, 2).contiguous()
+        confidences = torch.cat(confidences, 2).contiguous()
+        return bbox_delta, confidences
+
     
     def forward(self, img: torch.Tensor, **kwargs):
         """
@@ -167,12 +181,3 @@ def filter_predictions(
         # 3. Only keep max_output best boxes (NMS returns indices in sorted order, decreasing w.r.t. scores)
         keep_idx = keep_idx[:max_output]
         return boxes_ltrb[keep_idx], category[keep_idx], scores[keep_idx]
-
-       
-
-    
-    
-  
-        
-        
-

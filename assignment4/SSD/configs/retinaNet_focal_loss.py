@@ -5,5 +5,3 @@ from .retinaNet_FPN import train, anchors, optimizer, schedulers, model, backbon
 alpha = [0.01, 1, 1, 1, 1, 1, 1, 1, 1]  # Default alpha from project assignment
 
 loss_objective = L(RetinaFocalLoss)(anchors="${anchors}", alpha = alpha)
-
-# class_names = ("background", "car", "truck", "bus", "motorcycle", "bicycle", "scooter", "person", "rider")

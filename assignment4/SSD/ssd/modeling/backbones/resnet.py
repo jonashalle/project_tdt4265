@@ -26,28 +26,25 @@ class ResNet(nn.Module):
         x = self.model.maxpool(x) 
 
         out_features.append(x)
-        # print(f"x1.shape {x.shape}")
+
         x = self.model.layer1(x)
         x = self.model.maxpool(x) # Choosing to use an exta MaxPool instead of messing with the architecture of layer1
 
         out_features.append(x)
-        # print(f"x2.shape {x.shape}")
+       
         x = self.model.layer2(x)
 
         out_features.append(x)
-        # print(f"x3.shape {x.shape}")
+        
 
         x = self.model.layer3(x)
         out_features.append(x)
-        # print(f"x4.shape {x.shape}")
 
         x = self.model.layer4(x)
         out_features.append(x)
-        # print(f"x5.shape {x.shape}") 
 
         x = self.model.avgpool(x)
         out_features.append(x)
-        # print(f"x6.shape {x.shape}")
             
         return out_features
 

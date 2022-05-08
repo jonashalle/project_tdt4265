@@ -1,4 +1,3 @@
-from cv2 import transform
 import torch.nn as nn
 import torch
 import math
@@ -13,8 +12,7 @@ def focal_loss(alpha, gamma, confs, gt_labels):
     gt_labels: [batch_size, num_anchors]
     """
     num_classes = confs.shape[1]
-    batch_size = confs.shape[0]
-    yk = torch.nn.functional.one_hot(gt_labels, num_classes) 
+    yk = F.one_hot(gt_labels, num_classes) 
     yk = torch.transpose(yk, 1, 2)
     pk = F.softmax(confs, dim=1)
     log_pk = F.log_softmax(confs, dim=1)

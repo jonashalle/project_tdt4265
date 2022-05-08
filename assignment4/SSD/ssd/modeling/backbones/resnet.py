@@ -50,3 +50,6 @@ class ResNet(nn.Module):
         # print(f"x6.shape {x.shape}")
             
         return out_features
+
+model = ResNet()
+print(dir(model))

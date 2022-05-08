@@ -8,7 +8,6 @@ import tops
 from ssd import utils
 from tops.config import instantiate
 from PIL import Image
-from vizer.draw import draw_boxes
 from tops.checkpointer import load_checkpoint
 from pathlib import Path
 import numpy as np
@@ -31,8 +30,6 @@ import requests
 import torchvision
 from PIL import Image
 
-# Code is based on Tutorial: Class Activation Maps for Object Detection with Faster RCNN
-# and demo.py file
 
 def draw_b(boxes, labels, classes, image):
     for i, box in enumerate(boxes):
@@ -44,9 +41,6 @@ def draw_b(boxes, labels, classes, image):
             (int(box[2]), int(box[3])),
             color, 2
         )
-        # cv2.putText(image, classes[i], (int(box[0]), int(box[1] - 5)),
-        #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2,
-        #             lineType=cv2.LINE_AA)
     return image
 
 
@@ -78,50 +72,46 @@ def cam(config_path: Path, score_threshold: float):
         gpu_transform = instantiate(cfg.data_val.gpu_transform)
     cpu_transform = instantiate(cfg.data_val.dataset.transform)
     gpu_transform = instantiate(cfg.data_val.gpu_transform)
-    for j in range(1):
-        print('Loop number: ', j)
-        o = j+14
-        for i in range(100):
-            image_name = 'data/tdt4265_2022/images/train/trip007_glos_Video000{}_{}.png'.format(o,i)
+
+    first_video = 0 
+    for j in range(3): 
+        video_number = j+first_video 
+        for image_number in range(100):
+            image_name = 'data/tdt4265_2022/images/train/trip007_glos_Video000{}_{}.png'.format(video_number,image_number)
             orig_img = np.array(Image.open(image_name).convert("RGB"))
         
             height, width = orig_img.shape[:2]
             img = cpu_transform({"image": orig_img})["image"].unsqueeze(0)
             img = tops.to_cuda(img)
             img = gpu_transform({"image": img})["image"]
-            boxes, categories, scores = model(img,score_threshold=score_threshold)[0]
-        
+            boxes, labels, scores = model(img,score_threshold=score_threshold)[0]        
             boxes[:, [0, 2]] *= width
             boxes[:, [1, 3]] *= height
-            boxes, categories, scores = [_.cpu().numpy() for _ in [boxes, categories, scores]]
+            boxes, labels, scores = [_.cpu().numpy() for _ in [boxes, labels, scores]]
  
 
 
-            total_score = torch.from_numpy(scores)
             input_tensor = img
-            image_float_np = np.float32(orig_img)/255
-            labels = categories
-        
+            image_float_np = np.float32(orig_img)/255  
             classes = ("background","car", "truck", "bus", "motorcycle", "bicycle", "scooter", "person", "rider")
             fpn_model = model.feature_extractor
-            target_layers = [fpn_model.model.model.layer1]
+            target_layers = [fpn_model.model.model.layer4]
         
             
-            targets = [total_score]             #targets = [FasterRCNNBoxScoreTarget(labels=labels, bounding_boxes=boxes)]
+            targets = [FasterRCNNBoxScoreTarget(labels, boxes,0.8)] 
             cam = EigenCAM(model,               #nn.Module
                         target_layers,          # List[nn.Module]
                         use_cuda=torch.cuda.is_available()
                         )
-            cam.uses_gradients = False            
-            t = [FasterRCNNBoxScoreTarget(categories, boxes,0.8)]            
-            grayscale_cam = cam(input_tensor, targets=t)    #(Tensor, List[nn.Module])            
+            cam.uses_gradients = False                                   
+            grayscale_cam = cam(input_tensor, targets=targets)             
             grayscale_cam = grayscale_cam[0, :]
             cam_image = show_cam_on_image(image_float_np, grayscale_cam, use_rgb=True)            
             image_with_bounding_boxes = draw_b(boxes, labels, classes, cam_image)
             Image.fromarray(image_with_bounding_boxes)
             plt.imshow(image_with_bounding_boxes)
  
-            path = "CAM_figures/video{}/img{}".format(o,i)
+            path = "CAM_figures/video{}/img{}".format(video_number,i)
             plt.savefig(path)
         
 

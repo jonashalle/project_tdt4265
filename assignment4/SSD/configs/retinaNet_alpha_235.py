@@ -1,9 +1,7 @@
 from tops.config import LazyCall as L
-from ssd.modeling import AnchorBoxes
-from .retinaNet_initialization import model, train, optimizer, schedulers, backbone, loss_objective, data_train, data_val, label_map, train_cpu_transform, val_cpu_transform, gpu_transform
+from ssd.modeling import RetinaFocalLoss, AnchorBoxes
+from .retinaNet_initialization import model, anchors, train, optimizer, schedulers, backbone, data_train, data_val, label_map, train_cpu_transform, val_cpu_transform, gpu_transform
 
-
-ratio = [2,3]
 anchors = L(AnchorBoxes)(
     feature_sizes=[[32, 256], [16, 128], [8, 64], [4, 32], [2, 16], [1, 8]],
     # Strides is the number of pixels (in image space) between each spatial position in the feature map
@@ -15,8 +13,12 @@ anchors = L(AnchorBoxes)(
     # if ratio=[2], boxes will be created with ratio 1:2 and 2:1
     # Number of boxes per location is in total 2 + 2 per aspect ratio
     #aspect_ratios=[[2, 3], [2, 3], [2, 3], [2, 3], [2], [2]], #Original
-    aspect_ratios=[[2,3], [2,3], [2,5], [2,5], [2,3],[2,3]],
+    aspect_ratios=[[2, 3], [2, 3], [2, 5], [2, 5], [2, 3], [2, 3]],
     image_shape="${train.imshape}",
     scale_center_variance=0.1,
     scale_size_variance=0.2
 )
+
+alpha = [0.01, 1, 10, 10, 10, 10, 10, 3, 5]
+
+loss_objective = L(RetinaFocalLoss)(anchors="${anchors}", alpha = alpha)

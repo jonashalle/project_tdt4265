@@ -2,7 +2,7 @@ from tops.config import LazyCall as L
 from ssd.modeling import RetinaFocalLoss 
 from ssd.data import TDT4265Dataset
 from .utils import get_dataset_dir
-from .retinaNet_subnets import anchors, loss_objective, train, optimizer, schedulers, backbone, loss_objective, data_train, data_val, label_map, train_cpu_transform, val_cpu_transform, gpu_transform
+from .retinaNet_subnets import model, anchors, loss_objective, train, optimizer, schedulers, backbone, loss_objective, data_train, data_val, label_map, train_cpu_transform, val_cpu_transform, gpu_transform
 
 alpha = [0.01, 1, 1, 1, 1, 1, 1, 1, 1]
 

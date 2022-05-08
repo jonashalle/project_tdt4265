@@ -95,7 +95,7 @@ def cam(config_path: Path, score_threshold: float):
             image_float_np = np.float32(orig_img)/255  
             classes = ("background","car", "truck", "bus", "motorcycle", "bicycle", "scooter", "person", "rider")
             fpn_model = model.feature_extractor
-            target_layers = [fpn_model.model.model.layer4]
+            target_layers = [fpn_model.model.model.layer3]
         
             
             targets = [FasterRCNNBoxScoreTarget(labels, boxes,0.8)] 
@@ -111,7 +111,7 @@ def cam(config_path: Path, score_threshold: float):
             Image.fromarray(image_with_bounding_boxes)
             plt.imshow(image_with_bounding_boxes)
  
-            path = "CAM_figures/video{}/img{}".format(video_number,i)
+            path = "CAM_figures/video{}/img{}".format(video_number,image_number)
             plt.savefig(path)
         
 
